@@ -4,7 +4,10 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import authRoutes from './routes/auth';
+import session from 'express-session';
+import passport from 'passport';
+import authRoutes from './routes/auth'; // Your Google Auth routes
+import './passport'; // Passport strategy config
 
 dotenv.config();
 
@@ -20,10 +23,28 @@ app.use(cors({
 app.use(helmet());
 app.use(morgan('dev'));
 
+// Session (required for passport)
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'studity-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: false, // set to true in production with HTTPS
+    httpOnly: true,
+    maxAge: 1000 * 60 * 60 * 24, // 1 day
+  },
+}));
+
+// Passport middleware
+app.use(passport.initialize());
+app.use(passport.session());
+
 // MongoDB connection
 mongoose.connect(process.env.MONGO_URI as string)
   .then(() => console.log('✅ Connected to MongoDB'))
   .catch((err) => console.error('❌ MongoDB connection error:', err));
+
+console.log("RESEND_API_KEY:", process.env.RESEND_API_KEY); // Should NOT be undefined
 
 // Routes
 app.use('/api/auth', authRoutes);

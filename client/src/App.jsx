@@ -11,6 +11,8 @@ import Landing from "./pages/utils/Landing.jsx";
 // Auth Pages
 import Login from "./pages/auth/Login.jsx";
 import Signup from "./pages/auth/Signup.jsx";
+import ForgotPassword from "./pages/auth/ForgotPassword.jsx";
+import ResetPassword from "./pages/auth/ResetPassword.jsx";
 import NotFound from "./pages/auth/NotFound.jsx";
 import Unauthorized from "./pages/utils/Unauthorized.jsx";
 
@@ -41,6 +43,8 @@ function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
         
         {/* Student Routes */}

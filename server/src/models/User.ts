@@ -19,12 +19,19 @@ export interface ITeacherProfile {
 
 export interface IUser extends Document {
   email: string;
-  password: string;
+  password?: string;
+  firstName?: string;
+  lastName?: string;
+  avatar?: string;
+  googleId?: string;
   role: 'student' | 'teacher';
+  profileComplete: boolean;
   studentProfile?: IStudentProfile;
   teacherProfile?: ITeacherProfile;
   createdAt: Date;
   updatedAt: Date;
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
   matchPassword(enteredPassword: string): Promise<boolean>;
 }
 
@@ -39,12 +46,38 @@ const UserSchema: Schema<IUser> = new Schema(
     },
     password: {
       type: String,
-      required: true,
+    },
+    resetPasswordToken: {
+      type: String,
+    },
+    resetPasswordExpires: {
+      type: Date,
+    },
+    firstName: {
+      type: String,
+      trim: true,
+    },
+    lastName: {
+      type: String,
+      trim: true,
+    },
+    avatar: {
+      type: String,
+      trim: true,
+    },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
     },
     role: {
       type: String,
       enum: ['student', 'teacher'],
-      required: true,
+      default: 'student',
+    },
+    profileComplete: {
+      type: Boolean,
+      default: false,
     },
     studentProfile: {
       grade: String,
@@ -55,10 +88,12 @@ const UserSchema: Schema<IUser> = new Schema(
       qualifications: String,
       bio: String,
       subjects: [String],
-      availability: [{
-        day: String,
-        slots: [String]
-      }],
+      availability: [
+        {
+          day: String,
+          slots: [String],
+        },
+      ],
     },
   },
   {
@@ -66,9 +101,9 @@ const UserSchema: Schema<IUser> = new Schema(
   }
 );
 
-// Hash password before saving
+// Hash password before saving (only if modified and present)
 UserSchema.pre<IUser>('save', async function (next) {
-  if (!this.isModified('password')) return next();
+  if (!this.isModified('password') || !this.password) return next();
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
   next();
@@ -76,6 +111,7 @@ UserSchema.pre<IUser>('save', async function (next) {
 
 // Compare entered password with hashed password
 UserSchema.methods.matchPassword = async function (enteredPassword: string): Promise<boolean> {
+  if (!this.password) return false;
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
