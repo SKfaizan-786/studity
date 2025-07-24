@@ -21,23 +21,59 @@ export const register = async (req: Request, res: Response) => {
   try {
     const { email, password, role, firstName, lastName } = req.body;
 
+    if (!email || !password || !role || !firstName || !lastName) {
+      return res.status(400).json({
+        message: 'Email, password, role, first name and last name are required',
+        missingFields: {
+          email: !email,
+          password: !password,
+          role: !role,
+          firstName: !firstName,
+          lastName: !lastName
+        }
+      });
+    }
+
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
+      return res.status(400).json({
+        message: 'User already exists',
+        email: existingUser.email
+      });
     }
 
     const user = await User.create({ email, password, role, firstName, lastName });
 
+    const token = generateToken({ _id: user._id });
+
     res.status(201).json({
-      _id: user._id,
-      email: user.email,
-      role: user.role,
-      firstName: user.firstName,
-      lastName: user.lastName,
+      message: 'User registered successfully',
+      user: {
+        _id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        profileComplete: user.profileComplete
+      },
+      token
     });
   } catch (err) {
     console.error('Register error:', err);
-    res.status(500).json({ message: 'Server error during registration' });
+
+    // More detailed error response
+    const errorResponse: any = {
+      message: 'Server error during registration'
+    };
+
+    if (err instanceof Error) {
+      errorResponse.error = err.message;
+      if (err.name === 'ValidationError') {
+        errorResponse.details = (err as any).errors;
+      }
+    }
+
+    res.status(500).json(errorResponse);
   }
 };
 
@@ -169,7 +205,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
       process.env.NODE_ENV === 'development' && err instanceof Error
         ? err.message
         : undefined;
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Failed to process password reset request',
       error: errorMessage
     });

@@ -17,8 +17,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
-// --- IMPORT THE STORAGE UTILITIES ---
-import { setToLocalStorage, getFromLocalStorage } from "../utils/storage"; // Corrected path
+import { setToLocalStorage, getFromLocalStorage } from "../utils/storage";
 
 const passwordStrengthLevels = ["Very Weak", "Weak", "Fair", "Good", "Strong"];
 const passwordStrengthColors = [
@@ -36,8 +35,8 @@ const initialForm = {
   password: "",
   confirmPassword: "",
   acceptTerms: false,
-  role: "", // 'student' or 'teacher'
-  gender: "", // Only required for teachers
+  role: "",
+  gender: "",
 };
 
 const Signup = () => {
@@ -61,10 +60,9 @@ const Signup = () => {
     password: { valid: false, message: "", strength: 0 },
     confirmPassword: { valid: false, message: "" },
     role: { valid: false, message: "" },
-    gender: { valid: true, message: "" }, // Starts valid since not required for students
+    gender: { valid: true, message: "" },
   });
 
-  // Online/offline detection
   useEffect(() => {
     const handleOnline = () => setUi((u) => ({ ...u, isOnline: true }));
     const handleOffline = () => setUi((u) => ({ ...u, isOnline: false }));
@@ -80,7 +78,6 @@ const Signup = () => {
     };
   }, []);
 
-  // Caps lock detection
   useEffect(() => {
     const handleKeyPress = (e) => {
       if (
@@ -170,7 +167,6 @@ const Signup = () => {
         case "role":
           isValid = value === "student" || value === "teacher";
           message = !value ? "Please select a role." : "";
-          // Reset gender when role changes
           if (value === "student") {
             setFormData((p) => ({ ...p, gender: "" }));
             setValidation((v) => ({
@@ -180,7 +176,6 @@ const Signup = () => {
           }
           break;
         case "gender":
-          // Only validate if role is teacher
           isValid =
             formData.role !== "teacher" ||
             value === "male" ||
@@ -234,7 +229,7 @@ const Signup = () => {
       validation.password.valid &&
       validation.confirmPassword.valid &&
       validation.role.valid &&
-      (formData.role !== "teacher" || validation.gender.valid) && // Only check gender if teacher
+      (formData.role !== "teacher" || validation.gender.valid) &&
       formData.acceptTerms &&
       ui.isOnline;
     return isValid;
@@ -242,20 +237,7 @@ const Signup = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    Object.keys(formData).forEach((field) => {
-      validateField(field, formData[field]);
-    });
-
-    if (!isFormFullyValid()) {
-      setUi((u) => ({
-        ...u,
-        signupError: "Please fill in all required fields correctly.",
-      }));
-      return;
-    }
-
-    setUi((u) => ({ ...u, isSubmitting: true, signupError: "" }));
+    setUi((prev) => ({ ...prev, isSubmitting: true }));
 
     try {
       const response = await fetch("http://localhost:5000/api/auth/register", {
@@ -263,44 +245,39 @@ const Signup = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          role: formData.role,
-          gender: formData.role === "teacher" ? formData.gender : undefined,
-        }),
+        body: JSON.stringify(formData),
       });
 
-      const data = await response.json();
+      if (!response) {
+        throw new Error("No response from server");
+      }
+
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : {};
 
       if (!response.ok) {
         throw new Error(data.message || "Registration failed");
       }
 
-      // Store user data and token from response
-      setToLocalStorage("currentUser", data);
-      setToLocalStorage("lastLoginTime", new Date());
+      if (data.token) {
+        setToLocalStorage("token", data.token);
+      }
+      if (data.user) {
+        setToLocalStorage("currentUser", data.user);
+      }
 
-      setUi((u) => ({ ...u, isSubmitting: false, submitSuccess: true }));
-
-      setTimeout(() => {
-        setFormData(initialForm);
-        setUi((u) => ({ ...u, submitSuccess: false }));
-
-        if (formData.role === "student") {
-          navigate("/student/profile-setup");
-        } else if (formData.role === "teacher") {
-          navigate("/teacher/profile-setup");
-        } else {
-          navigate("/login");
-        }
-      }, 2500);
+      navigate("/login");
     } catch (error) {
-      setUi((u) => ({ ...u, isSubmitting: false, signupError: error.message }));
+      console.error("Signup submission error:", error);
+      setUi((prev) => ({
+        ...prev,
+        isSubmitting: false,
+        signupError: error.message || "Registration failed. Please try again.",
+      }));
     }
   };
 
-  const inputBase = `w-full py-3 px-4 border rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all duration-200 bg-white border-slate-300 text-slate-900 placeholder-slate-400`;
+  const inputBase = "w-full py-3 px-4 border rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all duration-200 bg-white border-slate-300 text-slate-900 placeholder-slate-400";
 
   const renderInput = (
     label,
@@ -324,7 +301,7 @@ const Signup = () => {
     return (
       <div className="space-y-2 transform hover:scale-[1.02] transition-all duration-300">
         <label
-          className={`block text-sm font-semibold text-slate-700 flex items-center gap-2 transition-colors duration-200 hover:text-violet-600`}
+          className="text-sm font-semibold text-slate-700 flex items-center gap-2 transition-colors duration-200 hover:text-violet-600"
         >
           {icon && (
             <span className="text-violet-500 transition-transform duration-200 hover:scale-110">
@@ -340,8 +317,8 @@ const Signup = () => {
                 <label
                   className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
                     formData.role === "student"
-                      ? `border-violet-500 shadow-violet-100 bg-violet-50`
-                      : `border-slate-200 hover:border-violet-300 bg-white hover:bg-violet-50`
+                      ? "border-violet-500 shadow-violet-100 bg-violet-50"
+                      : "border-slate-200 hover:border-violet-300 bg-white hover:bg-violet-50"
                   }`}
                 >
                   <input
@@ -355,7 +332,7 @@ const Signup = () => {
                   <div className="flex items-center space-x-2">
                     <GraduationCap className="w-5 h-5 text-violet-500 transition-transform duration-200 hover:scale-110" />
                     <span
-                      className={`font-medium transition-colors duration-200 hover:text-violet-700 text-slate-700`}
+                      className="font-medium transition-colors duration-200 hover:text-violet-700 text-slate-700"
                     >
                       Student
                     </span>
@@ -364,8 +341,8 @@ const Signup = () => {
                 <label
                   className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
                     formData.role === "teacher"
-                      ? `border-violet-500 shadow-violet-100 bg-violet-50`
-                      : `border-slate-200 hover:border-violet-300 bg-white hover:bg-violet-50`
+                      ? "border-violet-500 shadow-violet-100 bg-violet-50"
+                      : "border-slate-200 hover:border-violet-300 bg-white hover:bg-violet-50"
                   }`}
                 >
                   <input
@@ -379,7 +356,7 @@ const Signup = () => {
                   <div className="flex items-center space-x-2">
                     <UserCheck className="w-5 h-5 text-violet-500 transition-transform duration-200 hover:scale-110" />
                     <span
-                      className={`font-medium transition-colors duration-200 hover:text-violet-700 text-slate-700`}
+                      className="font-medium transition-colors duration-200 hover:text-violet-700 text-slate-700"
                     >
                       Teacher
                     </span>
@@ -391,8 +368,8 @@ const Signup = () => {
                   <label
                     className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
                       formData.gender === "male"
-                        ? `border-violet-500 shadow-violet-100 bg-violet-50`
-                        : `border-slate-200 hover:border-violet-300 bg-white hover:bg-violet-50`
+                        ? "border-violet-500 shadow-violet-100 bg-violet-50"
+                        : "border-slate-200 hover:border-violet-300 bg-white hover:bg-violet-50"
                     }`}
                   >
                     <input
@@ -404,7 +381,7 @@ const Signup = () => {
                       className="w-4 h-4 text-violet-600 border-slate-300 focus:ring-violet-500"
                     />
                     <span
-                      className={`font-medium transition-colors duration-200 hover:text-violet-700 text-slate-700`}
+                      className="font-medium transition-colors duration-200 hover:text-violet-700 text-slate-700"
                     >
                       Male
                     </span>
@@ -412,8 +389,8 @@ const Signup = () => {
                   <label
                     className={`flex items-center space-x-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 transform hover:scale-105 hover:shadow-lg ${
                       formData.gender === "female"
-                        ? `border-violet-500 shadow-violet-100 bg-violet-50`
-                        : `border-slate-200 hover:border-violet-300 bg-white hover:bg-violet-50`
+                        ? "border-violet-500 shadow-violet-100 bg-violet-50"
+                        : "border-slate-200 hover:border-violet-300 bg-white hover:bg-violet-50"
                     }`}
                   >
                     <input
@@ -425,7 +402,7 @@ const Signup = () => {
                       className="w-4 h-4 text-violet-600 border-slate-300 focus:ring-violet-500"
                     />
                     <span
-                      className={`font-medium transition-colors duration-200 hover:text-violet-700 text-slate-700`}
+                      className="font-medium transition-colors duration-200 hover:text-violet-700 text-slate-700"
                     >
                       Female
                     </span>
@@ -459,7 +436,6 @@ const Signup = () => {
                 }`}
                 placeholder={`Enter your ${label.toLowerCase()}`}
               />
-              {/* Validation indicators */}
               {val && !toggleable && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
                   {valid ? (
@@ -470,7 +446,6 @@ const Signup = () => {
                 </div>
               )}
 
-              {/* Password toggle button */}
               {toggleable && (
                 <button
                   type="button"
@@ -495,7 +470,6 @@ const Signup = () => {
             </>
           ) : null}
         </div>
-        {/* Error message display */}
         {error && (
           <p className="text-sm text-red-600 flex items-center gap-1">
             <X className="w-4 h-4" />
@@ -507,19 +481,13 @@ const Signup = () => {
   };
 
   return (
-    <div
-      className={`min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50 px-4 py-8`}
-    >
-      <div
-        className={`max-w-md w-full bg-white rounded-3xl shadow-xl overflow-hidden transform hover:scale-[1.02] transition-all duration-500 hover:shadow-2xl`}
-      >
-        {/* Header */}
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50 px-4 py-8">
+      <div className="max-w-md w-full bg-white rounded-3xl shadow-xl overflow-hidden transform hover:scale-[1.02] transition-all duration-500 hover:shadow-2xl">
         <div className="bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 px-8 py-8 text-white relative overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-r from-violet-600/90 via-purple-600/90 to-indigo-600/90 group-hover:from-violet-700/90 group-hover:via-purple-700/90 group-hover:to-indigo-700/90 transition-all duration-500"></div>
           <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-xl group-hover:scale-110 transition-transform duration-500"></div>
           <div className="absolute -bottom-2 -left-2 w-16 h-16 bg-white/10 rounded-full blur-lg group-hover:scale-110 transition-transform duration-500"></div>
 
-          {/* Header controls */}
           <div className="absolute top-4 right-4 flex gap-2 z-20">
             <div
               className={`w-8 h-8 rounded-full flex items-center justify-center ${
@@ -551,9 +519,7 @@ const Signup = () => {
           </div>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="p-8 space-y-6">
-          {/* Offline warning */}
           {!ui.isOnline && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3 animate-pulse">
               <Globe className="w-5 h-5 text-red-500" />
@@ -568,7 +534,6 @@ const Signup = () => {
             </div>
           )}
 
-          {/* Signup Error Message */}
           {ui.signupError && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3 animate-fade-in">
               <AlertTriangle className="w-5 h-5 text-red-500" />
@@ -612,13 +577,10 @@ const Signup = () => {
             true
           )}
 
-          {/* Password strength indicator */}
           {formData.password && (
-            <div
-              className={`p-4 rounded-xl border transform hover:scale-[1.01] transition-all duration-200 hover:shadow-md bg-slate-50 border-slate-200 hover:bg-slate-100`}
-            >
+            <div className="p-4 rounded-xl border transform hover:scale-[1.01] transition-all duration-200 hover:shadow-md bg-slate-50 border-slate-200 hover:bg-slate-100">
               <div className="flex justify-between items-center mb-2">
-                <span className={`text-sm font-medium text-slate-700`}>
+                <span className="text-sm font-medium text-slate-700">
                   Password Strength
                 </span>
                 <span
@@ -635,9 +597,7 @@ const Signup = () => {
                   {passwordStrengthLevels[ui.passwordStrength]}
                 </span>
               </div>
-              <div
-                className={`w-full rounded-full h-2 overflow-hidden bg-slate-200`}
-              >
+              <div className="w-full rounded-full h-2 overflow-hidden bg-slate-200">
                 <div
                   className={`h-2 rounded-full transition-all duration-500 ${
                     passwordStrengthColors[ui.passwordStrength]
@@ -656,10 +616,7 @@ const Signup = () => {
             true
           )}
 
-          {/* Terms checkbox */}
-          <div
-            className={`flex items-start space-x-3 p-4 rounded-xl border transform hover:scale-[1.01] transition-all duration-200 hover:shadow-md bg-slate-50 border-slate-200 hover:bg-slate-100`}
-          >
+          <div className="flex items-start space-x-3 p-4 rounded-xl border transform hover:scale-[1.01] transition-all duration-200 hover:shadow-md bg-slate-50 border-slate-200 hover:bg-slate-100">
             <input
               type="checkbox"
               name="acceptTerms"
@@ -667,7 +624,7 @@ const Signup = () => {
               onChange={handleInputChange}
               className="mt-1 w-4 h-4 text-violet-600 border-slate-300 rounded focus:ring-violet-500 transition-all duration-200 hover:scale-110"
             />
-            <label className={`text-sm text-slate-700`}>
+            <label className="text-sm text-slate-700">
               I agree to the{" "}
               <a
                 href="#"
@@ -685,7 +642,6 @@ const Signup = () => {
             </label>
           </div>
 
-          {/* Submit button */}
           <button
             type="submit"
             disabled={!isFormFullyValid() || ui.isSubmitting}
@@ -713,9 +669,8 @@ const Signup = () => {
             )}
           </button>
 
-          {/* Sign in link */}
-          <div className={`text-center pt-4 border-t border-slate-200`}>
-            <p className={`text-sm text-slate-600`}>
+          <div className="text-center pt-4 border-t border-slate-200">
+            <p className="text-sm text-slate-600">
               Already have an account?
               <Link
                 to="/login"
@@ -726,9 +681,8 @@ const Signup = () => {
             </p>
           </div>
 
-          {/* Additional features */}
           <div className="space-y-3 pt-4">
-            <div className={`text-center text-xs text-slate-500 space-y-1`}>
+            <div className="text-center text-xs text-slate-500 space-y-1">
               <div className="flex justify-center items-center gap-4">
                 <span className="flex items-center gap-1">
                   <Shield className="w-3 h-3" />
