@@ -9,7 +9,10 @@ import {
 
 const router = Router();
 
-router.post('/register', register);
+router.post('/register', (req, res, next) => {
+  console.log('Received registration data:', req.body);
+  next();
+}, register);
 router.post('/login', login);
 router.post('/google', googleLogin);
 router.post('/forgot-password', forgotPassword);

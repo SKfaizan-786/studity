@@ -1,5 +1,31 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Document, Schema, Types } from 'mongoose';
 import bcrypt from 'bcryptjs';
+
+// Define interfaces for nested objects
+export interface ITeachingSubject {
+  id: number;
+  text: string;
+}
+
+export interface ITeachingBoard {
+  id: number;
+  text: string;
+}
+
+export interface ITeachingClass {
+  id: number;
+  text: string;
+}
+
+export interface ITeachingAchievement {
+  id: number;
+  text: string;
+}
+
+export interface IAvailability {
+  day: string;
+  slots: string[];
+}
 
 export interface IStudentProfile {
   grade?: string;
@@ -8,35 +34,88 @@ export interface IStudentProfile {
 }
 
 export interface ITeacherProfile {
+  phone?: string;
+  location?: string;
   qualifications?: string;
+  experienceYears?: number;
+  currentOccupation?: string;
+  subjects?: ITeachingSubject[];
+  boards?: ITeachingBoard[];
+  classes?: ITeachingClass[];
+  teachingMode?: string;
+  preferredSchedule?: string;
   bio?: string;
-  subjects?: string[];
-  availability?: {
-    day: string;
-    slots: string[];
-  }[];
+  teachingApproach?: string;
+  achievements?: ITeachingAchievement[];
+  hourlyRate?: number;
+  photoUrl?: string;
+  availability?: IAvailability[];
 }
 
 export interface IUser extends Document {
   _id: string;
   email: string;
   password?: string;
-  firstName?: string;
-  lastName?: string;
+  firstName: string;
+  lastName: string;
   avatar?: string;
   googleId?: string;
   role: 'student' | 'teacher' | 'admin';
   profileComplete: boolean;
   studentProfile?: IStudentProfile;
   teacherProfile?: ITeacherProfile;
-  createdAt: Date;
-  updatedAt: Date;
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
+  createdAt: Date;
+  updatedAt: Date;
   matchPassword(enteredPassword: string): Promise<boolean>;
 }
 
-const UserSchema: Schema<IUser> = new Schema(
+const TeachingSubjectSchema = new Schema({
+  id: Number,
+  text: String
+});
+
+const TeachingBoardSchema = new Schema({
+  id: Number,
+  text: String
+});
+
+const TeachingClassSchema = new Schema({
+  id: Number,
+  text: String
+});
+
+const TeachingAchievementSchema = new Schema({
+  id: Number,
+  text: String
+});
+
+const AvailabilitySchema = new Schema({
+  day: String,
+  slots: [String]
+});
+
+const TeacherProfileSchema = new Schema({
+  phone: String,
+  location: String,
+  qualifications: String,
+  experienceYears: Number,
+  currentOccupation: String,
+  subjects: [TeachingSubjectSchema],
+  boards: [TeachingBoardSchema],
+  classes: [TeachingClassSchema],
+  teachingMode: String,
+  preferredSchedule: String,
+  bio: String,
+  teachingApproach: String,
+  achievements: [TeachingAchievementSchema],
+  hourlyRate: Number,
+  photoUrl: String,
+  availability: [AvailabilitySchema]
+});
+
+const UserSchema = new Schema<IUser>(
   {
     email: {
       type: String,
@@ -56,10 +135,12 @@ const UserSchema: Schema<IUser> = new Schema(
     },
     firstName: {
       type: String,
+      required: true,
       trim: true,
     },
     lastName: {
       type: String,
+      required: true,
       trim: true,
     },
     avatar: {
@@ -85,23 +166,14 @@ const UserSchema: Schema<IUser> = new Schema(
       subjects: [String],
       parentEmail: String,
     },
-    teacherProfile: {
-      qualifications: String,
-      bio: String,
-      subjects: [String],
-      availability: [
-        {
-          day: String,
-          slots: [String],
-        },
-      ],
-    },
+    teacherProfile: TeacherProfileSchema,
   },
   {
     timestamps: true,
   }
 );
 
+// Hash password before saving (only if modified and present)
 // Hash password before saving (only if modified and present)
 UserSchema.pre<IUser>('save', async function (next) {
   if (!this.isModified('password') || !this.password) return next();
@@ -116,4 +188,9 @@ UserSchema.methods.matchPassword = async function (enteredPassword: string): Pro
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-export default mongoose.model<IUser>('User', UserSchema);
+// ✅ Export UserDocument type for type-safe request.user
+export type UserDocument = IUser & Document;
+
+// ✅ Export the model correctly
+const UserModel = mongoose.model<UserDocument>('User', UserSchema);
+export default UserModel;

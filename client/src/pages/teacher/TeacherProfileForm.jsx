@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Cookies from 'js-cookie'; 
 import {
   Upload, Save, Phone, BookOpenCheck, MapPin, School, GraduationCap, UserCircle2, Check, X, Eye, EyeOff, Star, Camera, Trash2, Edit3, Loader2, Info, CheckCircle, Briefcase, Award, Clock
 } from 'lucide-react';
@@ -9,6 +10,7 @@ import { setToLocalStorage, getFromLocalStorage } from '../utils/storage';
 
 const TeacherProfileForm = () => {
   const navigate = useNavigate();
+  // const fileInputRef = useRef(null);
 
   // State to hold the form data
   const [formData, setFormData] = useState({
@@ -135,21 +137,20 @@ const TeacherProfileForm = () => {
     setUiState(prev => ({ ...prev, isSaving: true })); // Indicate saving in progress
 
     const timeoutId = setTimeout(() => {
-      // --- REPLACED localStorage.getItem with getFromLocalStorage ---
       const storedUser = getFromLocalStorage('currentUser', null);
       if (storedUser && storedUser.role === 'teacher') {
         const dataToSave = { ...formData };
         if (uiState.photoPreviewUrl) {
-          dataToSave.photoPreviewUrl = uiState.photoPreviewUrl;
-        } else {
-          delete dataToSave.photoPreviewUrl;
+          dataToSave.photoUrl = uiState.photoPreviewUrl;
         }
-        delete dataToSave.photo; // Remove the File object
+        delete dataToSave.photo;
 
         const updatedUser = {
           ...storedUser,
-          teacherProfileData: {
-            ...storedUser.teacherProfileData,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          teacherProfile: {
+            ...storedUser.teacherProfile,
             ...dataToSave
           }
         };
@@ -157,19 +158,25 @@ const TeacherProfileForm = () => {
         setToLocalStorage('currentUser', updatedUser);
         setUiState(prev => ({ ...prev, savedDataTimestamp: new Date().toLocaleTimeString(), isSaving: false }));
       }
-    }, 2000); // Debounce auto-save by 2 seconds
+    }, 2000);
 
     return () => {
       clearTimeout(timeoutId);
-      setUiState(prev => ({ ...prev, isSaving: false })); // Clear saving indicator if effect cleans up
+      setUiState(prev => ({ ...prev, isSaving: false }));
     };
-  }, [formData, uiState.userLoaded, uiState.photoPreviewUrl]); // Depend on formData and photoPreviewUrl
+  }, [formData, uiState.userLoaded, uiState.photoPreviewUrl]);// Depend on formData and photoPreviewUrl
 
 
   // --- Validation ---
   const validateField = useCallback((name, value) => {
     let error = '';
     switch (name) {
+      case 'firstName':
+      case 'lastName':
+        if (!value.trim()) {
+          error = 'This field is required';
+        }
+        break;
       case 'phone':
         if (value && !/^\+?[\d\s-()]{10,}$/.test(value)) {
           error = 'Please enter a valid phone number (min 10 digits).';
@@ -192,20 +199,12 @@ const TeacherProfileForm = () => {
           error = 'Please enter a valid hourly rate.';
         }
         break;
-      case 'subjectsTaught':
-      case 'boardsTaught':
-      case 'classesTaught':
+      case 'subjects':
+      case 'boards':
+      case 'classes':
         if (value.length === 0) {
           error = `Please add at least one ${name.replace(/([A-Z])/g, ' $1').toLowerCase().replace('taught', ' to teach')}.`;
         }
-        break;
-      // Optional fields with no strict validation error for empty value
-      case 'currentOccupation':
-      case 'bio':
-      case 'teachingApproach':
-      case 'achievements':
-      case 'preferredSchedule':
-      case 'photo':
         break;
       default:
         break;
@@ -251,7 +250,7 @@ const TeacherProfileForm = () => {
         [fieldName]: [...prev[fieldName], { id: Date.now(), text: inputValue }]
       }));
       setUiState(prev => ({ ...prev, [inputStateName]: '' }));
-      validateField(fieldName, [...formData[fieldName], { id: Date.now(), text: inputValue }]); // Re-validate the array field
+      validateField(fieldName, [...formData[fieldName], { id: Date.now(), text: inputValue }]);
     }
   }, [formData, uiState, validateField]);
 
@@ -261,7 +260,6 @@ const TeacherProfileForm = () => {
       ...prev,
       [fieldName]: prev[fieldName].filter(item => item.id !== id)
     }));
-    // Re-validate if removing a tag makes the field empty and it's required
     if (currentStepFields.includes(fieldName)) {
       validateField(fieldName, formData[fieldName].filter(item => item.id !== id));
     }
@@ -277,77 +275,84 @@ const TeacherProfileForm = () => {
   }, []);
 
   const handleSubmit = useCallback(async () => {
+    console.log('Submitting:', formData);
     setUiState(prev => ({ ...prev, isSubmitting: true }));
-    let formHasErrors = false;
-
-    // Validate all required fields across all steps
-    steps.flatMap(step => step.fields).forEach(field => {
-      // Explicitly check if array fields are empty, as validateField only triggers on change/blur
-      if (['subjectsTaught', 'boardsTaught', 'classesTaught'].includes(field)) {
-        // Only mark as error if it's a required field for the current step
-        if (currentStepFields.includes(field) && formData[field].length === 0) {
-          validateField(field, []); // Force validation for empty arrays
-          formHasErrors = true;
-        }
-      } else if (!['phone', 'experienceYears', 'currentOccupation', 'bio', 'teachingApproach', 'achievements', 'hourlyRate', 'photo'].includes(field)) {
-        const hasError = !validateField(field, formData[field]);
-        if (hasError) formHasErrors = true;
-      }
-    });
-
-    // Also check for any existing errors set by previous validations
-    if (Object.values(uiState.errors).some(error => error !== '')) {
-      formHasErrors = true;
-    }
-
-    if (formHasErrors) {
-      showMessage('Please fix the errors in your form before submitting.', 'error');
-      setUiState(prev => ({ ...prev, isSubmitting: false }));
-      return;
-    }
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log('Current token (raw from localStorage):', localStorage.getItem('token'));
+      let token = localStorage.getItem('token');
 
-      // --- REPLACED localStorage.getItem with getFromLocalStorage ---
-      const storedUser = getFromLocalStorage('currentUser', null);
-      if (storedUser && storedUser.role === 'teacher') {
-        const dataToSave = { ...formData };
-        if (uiState.photoPreviewUrl) {
-          dataToSave.photoPreviewUrl = uiState.photoPreviewUrl;
+      // Check if token exists and handle alternative storage
+      if (!token) {
+        const token2 = sessionStorage.getItem('token') || Cookies.get('token'); // Updated with cookies
+        if (token2) {
+          localStorage.setItem('token', token2);
+          token = token2; // Assign token2 to token
         } else {
-          delete dataToSave.photoPreviewUrl;
+          showMessage('Session expired. Please login again.', 'error');
+          navigate('/login');
+          return;
         }
-        delete dataToSave.photo;
-
-        const updatedUser = {
-          ...storedUser,
-          profileComplete: true,
-          teacherProfileData: dataToSave
-        };
-        // --- REPLACED localStorage.setItem with setToLocalStorage ---
-        setToLocalStorage('currentUser', updatedUser);
-
-        // --- REPLACED localStorage.getItem with getFromLocalStorage ---
-        const allUsers = getFromLocalStorage('registeredUsers', []);
-        // --- REPLACED localStorage.setItem with setToLocalStorage ---
-        const updatedAllUsers = allUsers.map(user =>
-          user.email === storedUser.email ? updatedUser : user
-        );
-        setToLocalStorage('registeredUsers', updatedAllUsers);
       }
 
-      showMessage('Teacher profile submitted successfully! 🎉', 'success');
-      // Delay navigation slightly to allow message to be seen
-      setTimeout(() => navigate('/teacher/dashboard'), 1500); // Redirect to the teacher dashboard
+      // Remove surrounding quotes if present
+      const cleanToken = token.replace(/^"(.*)"$/, '$1');
+      console.log('Cleaned token:', cleanToken);
+
+      const profileData = {
+        ...formData,
+        photoUrl: uiState.photoPreviewUrl
+      };
+
+      console.log('Request headers:', {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${cleanToken}`
+      });
+      console.log('Sending profile data:', profileData);
+
+      const response = await fetch('http://localhost:5000/api/profile/teacher', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${cleanToken}`
+        },
+        body: JSON.stringify(profileData)
+      });
+
+      console.log('Response status:', response.status);
+
+      const responseText = await response.text();
+      const result = responseText ? JSON.parse(responseText) : {};
+
+      if (!response.ok) {
+        throw new Error(result.message || `Server error: ${response.status}`);
+      }
+
+      const currentUser = getFromLocalStorage('currentUser') || {};
+      const updatedUser = {
+        ...currentUser,
+        ...result.user,
+        profileComplete: true
+      };
+
+      setToLocalStorage('currentUser', updatedUser);
+
+      showMessage('Profile saved successfully!', 'success');
+      setTimeout(() => navigate('/teacher/dashboard'), 500);
 
     } catch (error) {
-      console.error('Error submitting profile:', error);
-      showMessage('Error submitting profile. Please try again.', 'error');
+      console.error('Full error:', {
+        message: error.message,
+        stack: error.stack
+      });
+      showMessage(
+        error.message || 'Failed to save profile. Please try again.',
+        'error'
+      );
     } finally {
       setUiState(prev => ({ ...prev, isSubmitting: false }));
     }
-  }, [formData, uiState.errors, uiState.photoPreviewUrl, validateField, navigate, showMessage, steps, currentStepFields]);
+  }, [formData, uiState.photoPreviewUrl, navigate, showMessage]);
 
 
   const handleNextStep = useCallback(() => {
@@ -382,13 +387,12 @@ const TeacherProfileForm = () => {
   const renderInputField = useCallback((label, name, type = 'text', icon, placeholder, isRequired = false, isTextArea = false) => {
     const value = formData[name];
     const error = uiState.errors[name];
-    const inputClasses = `w-full p-4 border rounded-xl transition-all duration-200 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 ${
-      error ? 'border-red-500 bg-red-50' : 'border-gray-300'
-    } shadow-sm hover:shadow-md`;
+    const inputClasses = `w-full p-4 border rounded-xl transition-all duration-200 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 ${error ? 'border-red-500 bg-red-50' : 'border-gray-300'
+      } shadow-sm hover:shadow-md`;
 
     return (
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+        <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
           {icon} {label} {isRequired && <span className="text-red-500">*</span>}
         </label>
         {isTextArea ? (
@@ -420,13 +424,12 @@ const TeacherProfileForm = () => {
   const renderSelectField = useCallback((label, name, icon, options, placeholder, isRequired = false) => {
     const value = formData[name];
     const error = uiState.errors[name];
-    const selectClasses = `w-full p-4 border rounded-xl transition-all duration-200 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 ${
-      error ? 'border-red-500 bg-red-50' : 'border-gray-300'
-    } shadow-sm hover:shadow-md`;
+    const selectClasses = `w-full p-4 border rounded-xl transition-all duration-200 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 ${error ? 'border-red-500 bg-red-50' : 'border-gray-300'
+      } shadow-sm hover:shadow-md`;
 
     return (
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+        <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
           {icon} {label} {isRequired && <span className="text-red-500">*</span>}
         </label>
         <select
@@ -456,7 +459,7 @@ const TeacherProfileForm = () => {
 
     return (
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+        <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
           {icon} {label} {isRequired && <span className="text-red-500">*</span>}
         </label>
         <div className="flex gap-2 mb-3">
@@ -533,9 +536,8 @@ const TeacherProfileForm = () => {
             <div className="flex justify-between">
               {steps.map((step, index) => (
                 <div key={index} className="flex flex-col items-center flex-1">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 transform scale-90 ${
-                    index <= uiState.currentStep ? 'bg-white text-violet-600 shadow-md scale-100' : 'bg-white/20 text-white/60'
-                  }`}>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 transform scale-90 ${index <= uiState.currentStep ? 'bg-white text-violet-600 shadow-md scale-100' : 'bg-white/20 text-white/60'
+                    }`}>
                     {index < uiState.currentStep ? <Check className="w-5 h-5" /> : <step.icon className="w-5 h-5" />}
                   </div>
                   <span className="mt-2 text-xs sm:text-sm text-center">{step.title}</span>
@@ -547,11 +549,10 @@ const TeacherProfileForm = () => {
 
         {/* Global Message/Toast */}
         {uiState.message && (
-          <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 p-4 rounded-xl shadow-lg z-50 flex items-center gap-3 animate-fade-in-up ${
-            uiState.messageType === 'success' ? 'bg-green-500 text-white' :
+          <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 p-4 rounded-xl shadow-lg z-50 flex items-center gap-3 animate-fade-in-up ${uiState.messageType === 'success' ? 'bg-green-500 text-white' :
             uiState.messageType === 'error' ? 'bg-red-500 text-white' :
-            'bg-blue-500 text-white'
-          }`}>
+              'bg-blue-500 text-white'
+            }`}>
             {uiState.messageType === 'success' && <CheckCircle className="w-5 h-5" />}
             {uiState.messageType === 'error' && <X className="w-5 h-5" />}
             {uiState.messageType === 'info' && <Info className="w-5 h-5" />}
@@ -647,7 +648,7 @@ const TeacherProfileForm = () => {
                     {renderInputField('Expected Hourly Rate (INR)', 'hourlyRate', 'number', <Info className="w-4 h-4 text-violet-600" />, 'e.g., 500', false)}
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                      <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                         <Camera className="w-4 h-4 text-violet-600" /> Profile Photo (Optional)
                       </label>
                       <div className="flex items-center gap-4">

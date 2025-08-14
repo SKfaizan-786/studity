@@ -6,12 +6,8 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import session from 'express-session';
 import passport from 'passport';
-import authRoutes from './routes/auth';
-import profileRoutes from './routes/profile';
-import courseRoutes from './routes/courses';
-import bookingRoutes from './routes/bookings';
-import paymentRoutes from './routes/payments';
-import './passport';
+import authRoutes from './routes/auth'; // Your Google Auth routes
+import './passport'; // Passport strategy config
 
 dotenv.config();
 
@@ -27,42 +23,61 @@ app.use(cors({
 app.use(helmet());
 app.use(morgan('dev'));
 
-// Session (required for passport)
+// Session
 app.use(session({
   secret: process.env.SESSION_SECRET || 'yuvshiksha-secret',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false, // set to true in production with HTTPS
+    secure: false,
     httpOnly: true,
-    maxAge: 1000 * 60 * 60 * 24, // 1 day
+    maxAge: 1000 * 60 * 60 * 24,
   },
 }));
 
-// Passport middleware
+// Passport
 app.use(passport.initialize());
 app.use(passport.session());
 
-// MongoDB connection
+// MongoDB Connection
 mongoose.connect(process.env.MONGO_URI as string)
   .then(() => console.log('✅ Connected to MongoDB'))
   .catch((err) => console.error('❌ MongoDB connection error:', err));
 
-console.log("RESEND_API_KEY:", process.env.RESEND_API_KEY); // Should NOT be undefined
+console.log("RESEND_API_KEY:", process.env.RESEND_API_KEY);
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/profile', profileRoutes);
-app.use('/api/courses', courseRoutes);
-app.use('/api/bookings', bookingRoutes);
-app.use('/api/payments', paymentRoutes);
 
-// Root endpoint
+// Root Route
 app.get('/', (_req, res) => {
   res.send('🚀 API is running...');
 });
 
-// Start server
+// ✅ Test DB Connection Route with TypeScript-safe check
+app.get('/test-db-connection', async (_req, res) => {
+  try {
+    await mongoose.connection.asPromise(); // ensures the connection is ready
+    const db = mongoose.connection.db;
+
+    if (!db) {
+      return res.status(500).json({ message: 'Database is not ready' });
+    }
+
+    const testUser = await db.collection('users').findOne({});
+    console.log('Test DB Connection: Found a user:', testUser ? testUser._id : 'No user found');
+    res.json({ 
+      message: 'DB connection test complete', 
+      userFound: !!testUser, 
+      testUser: testUser ? testUser._id.toString() : null
+    });
+  } catch (err: any) {
+    console.error('Test DB Connection Error:', err);
+    res.status(500).json({ message: 'DB connection test failed', error: err.message });
+  }
+});
+
+// Start Server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
