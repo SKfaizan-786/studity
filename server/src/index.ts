@@ -6,8 +6,12 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import session from 'express-session';
 import passport from 'passport';
-import authRoutes from './routes/auth'; // Your Google Auth routes
-import './passport'; // Passport strategy config
+import authRoutes from './routes/auth';
+import profileRoutes from './routes/profile';
+import courseRoutes from './routes/courses';
+import bookingRoutes from './routes/bookings';
+import paymentRoutes from './routes/payments';
+import './passport';
 
 dotenv.config();
 
@@ -25,7 +29,7 @@ app.use(morgan('dev'));
 
 // Session (required for passport)
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'studity-secret',
+  secret: process.env.SESSION_SECRET || 'yuvshiksha-secret',
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -48,6 +52,10 @@ console.log("RESEND_API_KEY:", process.env.RESEND_API_KEY); // Should NOT be und
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/profile', profileRoutes);
+app.use('/api/courses', courseRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Root endpoint
 app.get('/', (_req, res) => {

@@ -142,11 +142,11 @@ export const forgotPassword = async (req: Request, res: Response) => {
     const resetUrl = `http://localhost:5173/reset-password/${resetToken}`;
 
     // Email content
-    const subject = 'Studity Password Reset';
+    const subject = 'Yuvshiksha Password Reset';
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #6d28d9;">Password Reset Request</h2>
-        <p>You requested a password reset for your Studity account.</p>
+        <p>You requested a password reset for your Yuvshiksha account.</p>
         <p>Click the button below to reset your password. This link will expire in 1 hour.</p>
         <a href="${resetUrl}" 
            style="display: inline-block; padding: 10px 20px; background-color: #6d28d9; color: white; text-decoration: none; border-radius: 8px; margin: 15px 0;">

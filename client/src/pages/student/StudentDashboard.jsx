@@ -94,16 +94,16 @@ const SidebarButton = ({ icon: Icon, text, onClick, isActive, count }) => {
       onClick={onClick}
       className={`group flex items-center w-full p-3 rounded-xl text-left font-medium transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg ${
         isActive
-          ? 'bg-purple-700 text-white shadow-lg' // Theme accent
-          : 'text-purple-200 hover:bg-violet-700/30 hover:text-white' // Theme accent
+          ? 'bg-blue-600 text-white shadow-lg'
+          : 'text-slate-700 hover:bg-white/60 hover:text-blue-600 hover:backdrop-blur-sm'
       }`}
     >
-      <Icon className={`w-5 h-5 mr-3 ${isActive ? 'text-white' : 'text-purple-300 group-hover:text-white'}`} /> {/* Theme accent */}
+      <Icon className={`w-5 h-5 mr-3 ${isActive ? 'text-white' : 'text-slate-600 group-hover:text-blue-600'}`} />
       <span>{text}</span>
       {count && (
         <span
           className={`ml-auto px-2 py-0.5 text-xs font-bold rounded-full transition-all duration-300 ${
-            isActive ? 'bg-white text-purple-700' : 'bg-purple-500 text-white group-hover:bg-white group-hover:text-purple-700' // Theme accent
+            isActive ? 'bg-white text-blue-600' : 'bg-blue-500 text-white group-hover:bg-blue-600 group-hover:text-white'
           }`}
         >
           {count}
@@ -132,17 +132,17 @@ const MainHeader = ({ currentUser, unseenNotificationsCount }) => {
   return (
     <div className="flex justify-between items-center mb-8">
       <div>
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">
-          Good {getTimeOfDay()}, <span className="text-purple-600">{currentUser.firstName}!</span> {/* Theme accent */}
+        <h1 className="text-4xl font-bold text-slate-900 mb-2">
+          Good {getTimeOfDay()}, <span className="text-blue-600">{currentUser.firstName}!</span>
         </h1>
-        <p className="text-gray-600 text-lg">Welcome back to your personalized dashboard.</p>
+        <p className="text-slate-600 text-lg">Welcome back to your personalized dashboard.</p>
       </div>
       <div className="flex items-center space-x-4 relative">
         <div className="relative">
           <input
             type="text"
             placeholder="Search anything..."
-            className="pl-10 pr-4 py-2 bg-white/70 backdrop-blur-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200 text-slate-700 placeholder-slate-400 shadow-sm" // Theme accent
+            className="pl-10 pr-4 py-2 bg-white/70 backdrop-blur-sm border border-white/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 text-slate-700 placeholder-slate-400 shadow-sm"
           />
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
         </div>
@@ -160,7 +160,7 @@ const MainHeader = ({ currentUser, unseenNotificationsCount }) => {
         </button>
 
         <div
-          className="w-12 h-12 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg cursor-pointer transform hover:scale-105 transition-all duration-200" // Theme accent
+          className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg cursor-pointer transform hover:scale-105 transition-all duration-200"
           onClick={() => setDropdownOpen(!dropdownOpen)}
         >
           {currentUser.firstName.charAt(0)}{currentUser.lastName.charAt(0)}
@@ -215,7 +215,7 @@ const StatCard = ({ title, value, icon: Icon, color, description }) => {
   const gradient = colorClasses[color] || colorClasses.primary; // Default to primary if color not found
 
   return (
-    <div className={`relative p-6 bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden transform hover:scale-[1.02] transition-all duration-300 hover:shadow-xl group`}>
+    <div className={`relative p-6 bg-white/60 backdrop-blur-sm rounded-2xl shadow-sm border border-white/40 overflow-hidden transform hover:scale-[1.02] transition-all duration-300 hover:shadow-lg group`}>
       <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-10 group-hover:opacity-20 transition-opacity duration-300`}></div>
       <div className="relative z-10">
         <div className="flex items-center justify-between mb-4">
@@ -248,7 +248,7 @@ const CourseCard = ({ course }) => {
   const progressColor = course.progress >= 70 ? 'bg-emerald-500' : course.progress >= 40 ? 'bg-amber-500' : 'bg-red-500';
 
   return (
-    <div className="relative p-6 bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden transform hover:scale-[1.02] transition-all duration-300 hover:shadow-xl group">
+    <div className="relative p-6 bg-white/60 backdrop-blur-sm rounded-2xl shadow-sm border border-white/40 overflow-hidden transform hover:scale-[1.02] transition-all duration-300 hover:shadow-lg group">
       <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-10 group-hover:opacity-20 transition-opacity duration-300`}></div>
       <div className="relative z-10">
         <div className="flex justify-between items-start mb-4">
@@ -299,7 +299,7 @@ const AssignmentCard = ({ assignment }) => {
   //   <AlertTriangle className="w-4 h-4" />;
 
   return (
-    <div className="relative p-6 bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden transform hover:scale-[1.02] transition-all duration-300 hover:shadow-xl group">
+    <div className="relative p-6 bg-white/60 backdrop-blur-sm rounded-2xl shadow-sm border border-white/40 overflow-hidden transform hover:scale-[1.02] transition-all duration-300 hover:shadow-lg group">
       <div className="relative z-10">
         <h3 className="text-xl font-semibold text-slate-800 mb-2">{assignment.title}</h3>
         <p className="text-sm text-slate-500 mb-3">Course: {assignment.course}</p>
@@ -354,7 +354,7 @@ const TodayScheduleItem = ({ item }) => {
   };
 
   return (
-    <div className="flex items-center space-x-4 p-4 bg-white rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-all duration-200 transform hover:scale-[1.01]">
+    <div className="flex items-center space-x-4 p-4 bg-white/60 backdrop-blur-sm rounded-xl shadow-sm border border-white/40 hover:shadow-md transition-all duration-200 transform hover:scale-[1.01]">
       <div className="flex-shrink-0">
         {typeIcon[item.type] || <CalendarDays className="w-4 h-4 text-slate-500" />}
       </div>
@@ -381,13 +381,16 @@ const StudentDashboard = () => {
   useEffect(() => {
     // Correctly use the imported getFromLocalStorage
     const user = getFromLocalStorage('currentUser', null);
+    
     if (!user) {
       navigate('/login');
       return;
     }
+    
     // For simplicity, directly set sample data. In a real app, you'd fetch this.
     setCurrentUser(user);
-    setDashboardData(getSampleStudentData(user.firstName));
+    const sampleData = getSampleStudentData(user.firstName);
+    setDashboardData(sampleData);
 
     // Simulate real-time updates for notifications (e.g., mark as read)
     const interval = setInterval(() => {
@@ -411,33 +414,43 @@ const StudentDashboard = () => {
 
   if (!currentUser || !dashboardData) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50 text-slate-700"> {/* Theme background */}
-        <Loader2 className="w-10 h-10 animate-spin text-purple-600" /> {/* Theme accent */}
-        <span className="ml-3 text-lg">Loading dashboard...</span>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 text-slate-700">
+        <div className="text-center">
+          <Loader2 className="w-10 h-10 animate-spin text-blue-600 mx-auto mb-4" />
+          <span className="text-lg">Loading dashboard...</span>
+        </div>
       </div>
     );
   }
 
   // Common Tailwind classes for consistency
-  const cardClass = "relative p-6 bg-white/70 backdrop-blur-md rounded-2xl shadow-xl border border-white/50"; // Frosted glass effect
-  const sectionTitleClass = "text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3";
+  const cardClass = "relative p-6 bg-white/60 backdrop-blur-sm rounded-2xl shadow-sm border border-white/40";
+  const sectionTitleClass = "text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3";
 
-  const sidebarClass = `w-72 bg-gradient-to-br from-violet-600/90 to-purple-600/90 backdrop-blur-3xl p-6 flex flex-col relative overflow-hidden shadow-2xl z-10`; // Theme gradient
-  const mainContentClass = `flex-1 p-8 overflow-y-auto bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50`; // Theme gradient background
+  const sidebarClass = `w-72 bg-white/80 backdrop-blur-xl border-r border-white/20 p-6 flex flex-col relative overflow-hidden shadow-lg z-10`; 
+  const mainContentClass = `flex-1 p-8 overflow-y-auto`;
 
   return (
     <UserContext.Provider value={currentUser}>
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 relative overflow-hidden">
+        {/* Animated gradient orbs for background effect */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/30 to-purple-600/30 rounded-full blur-3xl animate-float"></div>
+          <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-purple-400/20 to-pink-600/20 rounded-full blur-3xl animate-float-delayed"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-r from-indigo-400/10 to-blue-600/10 rounded-full blur-3xl animate-float-slow"></div>
+        </div>
+        
+        {/* Content */}
+        <div className="relative z-10 flex min-h-screen w-full">
         {/* Sidebar */}
         <aside className={sidebarClass}>
-          <div className="absolute inset-0 bg-gradient-to-br from-violet-600/80 to-purple-600/80 backdrop-blur-3xl"></div> {/* Darker theme accent background */}
           <div className="relative z-10 flex flex-col h-full">
             <div className="mb-8 text-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-white/30 to-white/10 rounded-2xl flex items-center justify-center mb-4 mx-auto transform rotate-6 hover:rotate-0 transition-all duration-300">
-                <BookOpen className="w-8 h-8 text-white" />
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mb-4 mx-auto transform hover:scale-105 transition-all duration-300">
+                <GraduationCap className="w-8 h-8 text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-white mb-1">MyCampus</h2>
-              <p className="text-violet-200 text-sm">Student Portal</p> {/* Theme accent */}
+              <h2 className="text-2xl font-bold text-slate-900 mb-1">Yuvshiksha</h2>
+              <p className="text-slate-600 text-sm">Student Portal</p>
             </div>
 
             <nav className="space-y-2 mb-8 flex-1">
@@ -728,6 +741,7 @@ const StudentDashboard = () => {
           )}
 
         </main>
+        </div>
       </div>
     </UserContext.Provider>
   );

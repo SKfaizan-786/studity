@@ -1,10 +1,24 @@
-// client/src/pages/HomePage.jsx
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Zap, ArrowRight, Lightbulb, Users, BookOpen, BarChart2, Award, Globe, MessageSquare } from 'lucide-react';
+import { 
+  GraduationCap, 
+  ArrowRight, 
+  Users, 
+  BookOpen, 
+  Star,
+  Play,
+  CheckCircle,
+  Clock,
+  Award,
+  MessageCircle,
+  Zap,
+  TrendingUp,
+  Shield,
+  Heart
+} from 'lucide-react';
 
-// Animation variants for staggered appearance
+// Animation variants for sta                Join thousand              Join Yuvshiksha today and connect with expert tutors who will help you achieve your academic goals. of students and teachers who have found success with Yuvshikshagered appearance
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -20,179 +34,404 @@ const itemVariants = {
   visible: { opacity: 1, y: 0 },
 };
 
-// A reusable Feature component with enhanced styling and animation
-const Feature = ({ icon, title, description, delay }) => (
+// Hero Stats Component
+const StatCard = ({ number, label, delay }) => (
   <motion.div
-    className="bg-white/70 backdrop-blur-xl p-8 rounded-3xl shadow-xl text-center border border-indigo-100 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 ease-out"
-    variants={itemVariants} // Apply itemVariants for staggered animation
-    initial="hidden"
-    animate="visible"
-    transition={{ delay, duration: 0.6, ease: 'easeOut' }}
+    className="text-center"
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay: delay + 0.5, duration: 0.6 }}
   >
-    <div className="flex justify-center mb-5">
-      {React.cloneElement(icon, { className: `${icon.props.className} w-12 h-12 transition-transform duration-300 group-hover:rotate-6` })}
-    </div>
-    <h3 className="text-2xl font-bold mb-3 text-indigo-800">{title}</h3>
-    <p className="text-gray-700 leading-relaxed">{description}</p>
+    <div className="text-3xl font-bold text-slate-800 mb-1">{number}</div>
+    <div className="text-sm text-slate-600 font-medium">{label}</div>
   </motion.div>
 );
 
-export default function HomePage() { // Renamed from Landing to HomePage for clarity in routing
-  const baseClasses = `min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 py-16 transition-all duration-700 ease-in-out bg-gradient-to-br from-indigo-50 via-blue-100 to-purple-100 text-slate-900 overflow-hidden relative`;
-  const buttonBaseClasses = `px-8 py-4 rounded-full font-bold text-lg flex items-center justify-center gap-3 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-xl`;
-  const primaryButtonClasses = `bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white hover:from-violet-700 hover:via-purple-700 hover:to-indigo-700`;
-  const secondaryButtonClasses = `bg-white border-2 border-indigo-400 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-500`;
+// Feature Card Component
+const FeatureCard = ({ icon, title, description, delay, className = "" }) => (
+  <motion.div
+    className={`bg-white p-6 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 border border-slate-100 ${className}`}
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay, duration: 0.6 }}
+  >
+    <div className="mb-4">
+      {React.cloneElement(icon, { className: "w-6 h-6 text-blue-600" })}
+    </div>
+    <h3 className="text-lg font-semibold text-slate-800 mb-2">{title}</h3>
+    <p className="text-slate-600 text-sm leading-relaxed">{description}</p>
+  </motion.div>
+);
 
+// Testimonial Component
+const TestimonialCard = ({ name, role, content, avatar, delay }) => (
+  <motion.div
+    className="bg-white/60 backdrop-blur-sm p-6 rounded-2xl shadow-sm border border-white/40"
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay, duration: 0.6 }}
+  >
+    <div className="flex items-center mb-3">
+      {[...Array(5)].map((_, i) => (
+        <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
+      ))}
+    </div>
+    <p className="text-slate-600 text-sm mb-4 leading-relaxed">"{content}"</p>
+    <div className="flex items-center">
+      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+        {name.charAt(0)}
+      </div>
+      <div className="ml-3">
+        <div className="font-medium text-slate-800 text-sm">{name}</div>
+        <div className="text-xs text-slate-500">{role}</div>
+      </div>
+    </div>
+  </motion.div>
+);
+
+export default function HomePage() {
   const features = [
     {
-      icon: <Users className="text-violet-600" />,
-      title: 'Dynamic Collaboration',
-      description: 'Engage with peers and expert instructors in real-time, fostering a vibrant learning environment.',
-      delay: 0.3,
+      icon: <Users />,
+      title: 'Expert Teachers',
+      description: 'Learn from verified, experienced educators who are passionate about your success.',
     },
     {
-      icon: <BookOpen className="text-blue-600" />,
-      title: 'Extensive Content Library',
-      description: 'Access a rich and diverse collection of courses, interactive tutorials, and comprehensive study materials.',
-      delay: 0.5,
+      icon: <Clock />,
+      title: 'Flexible Scheduling',
+      description: 'Book lessons at your convenience with 24/7 availability across different time zones.',
     },
     {
-      icon: <BarChart2 className="text-purple-600" />,
-      title: 'Personalized Progress Tracking',
-      description: 'Monitor your academic growth with intuitive analytics and receive tailored insights to optimize your learning path.',
-      delay: 0.7,
+      icon: <BookOpen />,
+      title: 'Personalized Learning',
+      description: 'Customized lesson plans tailored to your learning style and academic goals.',
     },
     {
-      icon: <Award className="text-green-600" />,
-      title: 'Certified Instructors',
-      description: 'Learn from highly qualified and experienced educators dedicated to your success.',
-      delay: 0.9,
+      icon: <Shield />,
+      title: 'Safe & Secure',
+      description: 'Secure payments, verified profiles, and monitored sessions for your peace of mind.',
     },
     {
-      icon: <Globe className="text-orange-600" />,
-      title: 'Global Community',
-      description: 'Connect with learners and teachers worldwide, broadening your perspective and network.',
-      delay: 1.1,
+      icon: <TrendingUp />,
+      title: 'Track Progress',
+      description: 'Monitor your improvement with detailed analytics and progress reports.',
     },
     {
-      icon: <Lightbulb className="text-yellow-600" />,
-      title: 'Innovative Learning Tools',
-      description: 'Utilize cutting-edge tools and interactive exercises designed to make learning engaging and effective.',
-      delay: 1.3,
+      icon: <Heart />,
+      title: 'Student Success',
+      description: 'Join thousands of students who have achieved their academic goals with us.',
     },
   ];
 
+  const testimonials = [
+    {
+      name: "Sarah Chen",
+      role: "Math Student",
+      content: "The tutoring here is amazing! My grades improved dramatically and I actually enjoy learning now.",
+      delay: 0.1
+    },
+    {
+      name: "David Kumar",
+      role: "Physics Teacher", 
+      content: "As an educator, I love how this platform connects me with motivated students worldwide.",
+      delay: 0.2
+    },
+    {
+      name: "Emily Rodriguez",
+      role: "Parent",
+      content: "My daughter's confidence in science has grown so much. The teachers are patient and skilled.",
+      delay: 0.3
+    }
+  ];
+
   return (
-    <div className={baseClasses}>
-      {/* Animated Blobs (more subtle and varied) */}
-      <motion.div
-        className="absolute top-[10%] left-[15%] w-48 h-48 bg-violet-300/20 rounded-full blur-3xl"
-        animate={{
-          scale: [1, 1.1, 0.9, 1],
-          rotate: [0, 120, 240, 360],
-          x: [0, 50, -50, 0],
-          y: [0, -30, 30, 0],
-        }}
-        transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
-      />
-      <motion.div
-        className="absolute bottom-[20%] right-[10%] w-60 h-60 bg-blue-300/20 rounded-full blur-3xl"
-        animate={{
-          scale: [1, 0.9, 1.1, 1],
-          x: [0, -70, 70, 0],
-          y: [0, 40, -40, 0],
-        }}
-        transition={{ duration: 30, repeat: Infinity, delay: 5, ease: "easeInOut" }}
-      />
-      <motion.div
-        className="absolute top-[50%] left-[5%] w-36 h-36 bg-purple-300/20 rounded-full blur-3xl"
-        animate={{
-          scale: [1, 1.2, 1],
-          y: [0, 60, -60, 0],
-          rotate: [0, -100, 100, 0],
-        }}
-        transition={{ duration: 20, repeat: Infinity, delay: 10, ease: "easeInOut" }}
-      />
-       <motion.div
-        className="absolute bottom-[5%] left-[30%] w-32 h-32 bg-pink-300/20 rounded-full blur-3xl"
-        animate={{
-          scale: [1, 0.8, 1],
-          x: [0, 40, -40, 0],
-        }}
-        transition={{ duration: 18, repeat: Infinity, delay: 3, ease: "easeInOut" }}
-      />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 relative overflow-hidden">
+      {/* Animated gradient orbs for background effect */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/30 to-purple-600/30 rounded-full blur-3xl animate-float"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-purple-400/20 to-pink-600/20 rounded-full blur-3xl animate-float-delayed"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-r from-indigo-400/10 to-blue-600/10 rounded-full blur-3xl animate-float-slow"></div>
+        <div className="absolute top-20 left-1/4 w-48 h-48 bg-gradient-to-br from-cyan-400/20 to-blue-500/20 rounded-full blur-3xl animate-pulse-glow"></div>
+        <div className="absolute bottom-20 right-1/4 w-56 h-56 bg-gradient-to-tr from-violet-400/15 to-purple-500/15 rounded-full blur-3xl animate-pulse-glow" style={{animationDelay: '2s'}}></div>
+      </div>
+      
+      {/* Content */}
+      <div className="relative z-10 pt-16">
+        {/* Hero Section */}
+        <section className="pt-12 pb-16 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                className="mb-6"
+              >
+                <div className="inline-flex items-center px-4 py-2 bg-white/60 backdrop-blur-sm rounded-full text-blue-700 text-sm font-medium mb-8 border border-white/20">
+                  <Zap className="w-4 h-4 mr-2" />
+                  Connecting students with expert teachers worldwide
+                </div>
+              </motion.div>
 
-      <motion.div
-        className="max-w-5xl w-full text-center space-y-10 p-6 sm:p-10 rounded-3xl relative z-10 bg-white/80 backdrop-blur-md shadow-3xl border border-white"
-        initial={{ opacity: 0, y: 50, scale: 0.95 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.8, ease: 'easeOut' }}
-      >
-        <motion.h1
-          className="text-4xl sm:text-5xl md:text-6xl font-extrabold mb-4 text-indigo-800 leading-tight"
-          variants={itemVariants}
-        >
-          Your Transformative Learning Journey Starts Here
-        </motion.h1>
-        <motion.p
-          className="text-lg sm:text-xl md:text-2xl mb-8 max-w-3xl mx-auto text-gray-700 leading-relaxed"
-          variants={itemVariants}
-        >
-          A cutting-edge platform designed to empower **students to excel** and **teachers to inspire** — seamlessly integrated for optimal growth.
-        </motion.p>
+              <motion.h1
+                className="text-5xl md:text-6xl font-bold text-slate-900 mb-6 leading-tight"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.6 }}
+              >
+                Learn from the best,{' '}
+                <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  achieve your goals
+                </span>
+              </motion.h1>
 
-        {/* CTA Buttons */}
-        <motion.div
-          className="flex flex-col sm:flex-row justify-center items-center gap-6"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          <motion.div variants={itemVariants}>
-            <Link to="/signup" className={`${buttonBaseClasses} ${primaryButtonClasses}`}>
-              Get Started <ArrowRight className="w-6 h-6" />
-            </Link>
-          </motion.div>
-          <motion.div variants={itemVariants}>
-            <Link to="/login" className={`${buttonBaseClasses} ${secondaryButtonClasses}`}>
-              <Zap className="w-6 h-6" /> Log In
-            </Link>
-          </motion.div>
-        </motion.div>
+              <motion.p
+                className="text-xl text-slate-600 mb-8 max-w-3xl mx-auto leading-relaxed"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.6 }}
+              >
+                Find qualified tutors for personalized 1-on-1 lessons. Book instantly, 
+                learn at your pace, and excel in any subject with Yuvshiksha.
+              </motion.p>
 
-        {/* Features Section */}
-        <div className="mt-20">
+              <motion.div
+                className="flex flex-col sm:flex-row gap-4 justify-center mb-12"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.6 }}
+              >
+                <Link 
+                  to="/signup"
+                  className="inline-flex items-center px-8 py-4 bg-blue-600 text-white font-semibold rounded-2xl hover:bg-blue-700 transition-colors duration-200 shadow-lg hover:shadow-xl"
+                >
+                  <GraduationCap className="w-5 h-5 mr-2" />
+                  Start Learning
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Link>
+                <Link 
+                  to="/login"
+                  className="inline-flex items-center px-8 py-4 bg-white/70 backdrop-blur-sm border-2 border-white/40 text-slate-700 font-semibold rounded-2xl hover:bg-white/80 hover:border-white/60 transition-all duration-200"
+                >
+                  <Play className="w-5 h-5 mr-2" />
+                  Sign In
+                </Link>
+              </motion.div>
+
+              {/* Stats */}
+              <motion.div
+                className="grid grid-cols-3 gap-8 max-w-lg mx-auto"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                <StatCard number="10,000+" label="Students" delay={0.1} />
+                <StatCard number="500+" label="Expert Teachers" delay={0.2} />
+                <StatCard number="50+" label="Subjects" delay={0.3} />
+              </motion.div>
+            </div>
+          </div>
+        </section>
+      {/* Features Section */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white/30 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <motion.h2
+              className="text-3xl md:text-4xl font-bold text-slate-900 mb-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1, duration: 0.6 }}
+            >
+              Everything you need to succeed
+            </motion.h2>
+            <motion.p
+              className="text-lg text-slate-600 max-w-2xl mx-auto"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.6 }}
+            >
+              Our platform provides all the tools and support you need for effective online learning
+            </motion.p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {features.map((feature, index) => (
+              <FeatureCard 
+                key={index} 
+                {...feature} 
+                delay={0.3 + (index * 0.1)} 
+                className="bg-white/60 backdrop-blur-sm border-white/40"
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How it Works Section */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <motion.h2
+              className="text-3xl md:text-4xl font-bold text-slate-900 mb-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1, duration: 0.6 }}
+            >
+              How Yuvshiksha works
+            </motion.h2>
+            <motion.p
+              className="text-lg text-slate-600 max-w-2xl mx-auto"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.6 }}
+            >
+              Getting started is simple. Connect with expert tutors in just a few steps.
+            </motion.p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <motion.div
+              className="text-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.6 }}
+            >
+              <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl font-bold text-blue-600">1</span>
+              </div>
+              <h3 className="text-xl font-semibold text-slate-900 mb-2">Browse Teachers</h3>
+              <p className="text-slate-600">Find the perfect tutor based on subject, availability, and reviews.</p>
+            </motion.div>
+
+            <motion.div
+              className="text-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.6 }}
+            >
+              <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl font-bold text-green-600">2</span>
+              </div>
+              <h3 className="text-xl font-semibold text-slate-900 mb-2">Book a Session</h3>
+              <p className="text-slate-600">Schedule your lesson at a time that works for you and make secure payment.</p>
+            </motion.div>
+
+            <motion.div
+              className="text-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.6 }}
+            >
+              <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl font-bold text-purple-600">3</span>
+              </div>
+              <h3 className="text-xl font-semibold text-slate-900 mb-2">Start Learning</h3>
+              <p className="text-slate-600">Join your online session and start achieving your academic goals.</p>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white/30 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <motion.h2
+              className="text-3xl md:text-4xl font-bold text-slate-900 mb-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1, duration: 0.6 }}
+            >
+              What our community says
+            </motion.h2>
+            <motion.p
+              className="text-lg text-slate-600 max-w-2xl mx-auto"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.6 }}
+            >
+              Join thousands of students and teachers who have found success with Yuvshiksha
+            </motion.p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {testimonials.map((testimonial, index) => (
+              <TestimonialCard key={index} {...testimonial} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto text-center">
           <motion.h2
-            className="text-4xl font-bold text-center mb-12 text-indigo-800"
-            initial={{ opacity: 0, y: 30 }}
+            className="text-3xl md:text-4xl font-bold text-slate-900 mb-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1, duration: 0.6 }}
+          >
+            Ready to start your learning journey?
+          </motion.h2>
+          <motion.p
+            className="text-lg text-slate-600 mb-8 max-w-2xl mx-auto"
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.6 }}
           >
-            Why Choose Our Platform?
-          </motion.h2>
+            Join Yuvshiksha today and connect with expert tutors who will help you achieve your academic goals.
+          </motion.p>
           <motion.div
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10"
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
+            className="flex flex-col sm:flex-row gap-4 justify-center"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.6 }}
           >
-            {features.map((feature, index) => (
-              <Feature key={index} {...feature} />
-            ))}
+            <Link 
+              to="/signup"
+              className="inline-flex items-center px-8 py-4 bg-blue-600 text-white font-semibold rounded-2xl hover:bg-blue-700 transition-colors duration-200"
+            >
+              Get Started Free
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </Link>
+            <Link 
+              to="/login"
+              className="inline-flex items-center px-8 py-4 bg-white border-2 border-slate-200 text-slate-700 font-semibold rounded-2xl hover:border-slate-300 hover:bg-slate-50 transition-all duration-200"
+            >
+              Sign In
+            </Link>
           </motion.div>
         </div>
+      </section>
 
         {/* Footer */}
-        <div className="mt-16 pt-10 border-t border-gray-200 text-gray-600 text-sm">
-          <p className="flex items-center justify-center gap-2 mb-3 text-base">
-            <MessageSquare className="w-5 h-5 text-purple-500" />
-            Have questions? We're here to help!
-          </p>
-          <p className="text-base">
-            Visit our <Link to="/contact" className="text-indigo-600 hover:underline font-medium">Support Center</Link> or learn more <Link to="/about" className="text-indigo-600 hover:underline font-medium">About Us</Link>.
-          </p>
-        </div>
-      </motion.div>
+        <footer className="py-8 px-4 sm:px-6 lg:px-8 border-t border-white/20 bg-white/20 backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex flex-col md:flex-row justify-between items-center">
+              <div className="flex items-center mb-4 md:mb-0">
+                <GraduationCap className="w-8 h-8 text-blue-600 mr-2" />
+                <span className="text-xl font-bold text-slate-900">Yuvshiksha</span>
+              </div>
+              <div className="flex items-center space-x-6">
+                <Link to="/about" className="text-slate-600 hover:text-slate-900 transition-colors">
+                  About
+                </Link>
+                <Link to="/contact" className="text-slate-600 hover:text-slate-900 transition-colors">
+                  Contact
+                </Link>
+                <Link to="/help" className="text-slate-600 hover:text-slate-900 transition-colors">
+                  Help
+                </Link>
+              </div>
+            </div>
+            <div className="mt-6 pt-6 border-t border-white/20 text-center">
+              <p className="text-slate-500 text-sm">
+                © 2025 Yuvshiksha. All rights reserved. Made with ❤️ for students and teachers worldwide.
+              </p>
+            </div>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 }

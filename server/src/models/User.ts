@@ -18,13 +18,14 @@ export interface ITeacherProfile {
 }
 
 export interface IUser extends Document {
+  _id: string;
   email: string;
   password?: string;
   firstName?: string;
   lastName?: string;
   avatar?: string;
   googleId?: string;
-  role: 'student' | 'teacher';
+  role: 'student' | 'teacher' | 'admin';
   profileComplete: boolean;
   studentProfile?: IStudentProfile;
   teacherProfile?: ITeacherProfile;
@@ -72,7 +73,7 @@ const UserSchema: Schema<IUser> = new Schema(
     },
     role: {
       type: String,
-      enum: ['student', 'teacher'],
+      enum: ['student', 'teacher', 'admin'],
       default: 'student',
     },
     profileComplete: {

@@ -1,10 +1,11 @@
 import { Link, useNavigate } from "react-router-dom";
-import React, { useEffect, useState } from 'react'; // Import useEffect and useState
+import React, { useEffect, useState } from 'react';
+import { GraduationCap, User, LogOut, Menu, X } from 'lucide-react';
 
 export default function Navbar() {
   const navigate = useNavigate();
-  // State to store current user information
   const [currentUser, setCurrentUser] = useState(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Effect to load user from localStorage and keep track of changes
   useEffect(() => {
@@ -14,100 +15,181 @@ export default function Navbar() {
         setCurrentUser(storedUser);
       } catch (error) {
         console.error("Failed to parse currentUser from localStorage:", error);
-        setCurrentUser(null); // Clear user if parsing fails
+        setCurrentUser(null);
       }
     };
 
-    // Initial check
     checkUser();
-
-    // Listen for storage changes from other tabs/windows
     window.addEventListener('storage', checkUser);
-
-    // Clean up event listener
-    return () => {
-      window.removeEventListener('storage', checkUser);
-    };
+    return () => window.removeEventListener('storage', checkUser);
   }, []);
 
   const userRole = currentUser?.role;
   const isProfileComplete = currentUser?.profileComplete;
 
   const handleLogout = () => {
-    // Clear only user-related items from localStorage
     localStorage.removeItem('currentUser');
     localStorage.removeItem('lastLoginTime');
-    // Force a re-check of user status in Navbar (triggers the useEffect)
-    setCurrentUser(null); 
+    setCurrentUser(null);
     navigate("/login");
   };
 
+  const navLinks = [
+    { name: 'Find Teachers', path: '/student/find-teachers', roles: ['student'] },
+    { name: 'Courses', path: '/courses', roles: ['student', 'teacher'] },
+    { name: 'Pricing', path: '/pricing', roles: [] },
+    { name: 'Help', path: '/help', roles: [] },
+  ];
+
   return (
-    <nav className="bg-white shadow-md p-4 flex justify-between items-center z-30 relative"> {/* Added z-index to ensure Navbar is on top */}
-      <Link to="/" className="text-2xl font-extrabold text-indigo-600 transition-colors duration-300 hover:text-indigo-800">MyCampus</Link> {/* Updated title and added hover */}
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-white/20 shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          {/* Logo */}
+          <Link to="/" className="flex items-center space-x-2 group">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
+              <GraduationCap className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors duration-200">
+              Yuvshiksha
+            </span>
+          </Link>
 
-      <div className="space-x-4 text-base font-medium"> {/* Adjusted font size and weight */}
-        {/* Conditional rendering based on user role and profile completion */}
-        {userRole === 'student' && (
-          <>
-            <Link 
-              to={isProfileComplete ? "/student/dashboard" : "/student/profile-setup"} 
-              className="hover:text-indigo-600 transition-colors duration-200"
-            >
-              Dashboard
-            </Link>
-            {isProfileComplete && (
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center space-x-1">
+            {navLinks.map((link) => {
+              const isVisible = link.roles.length === 0 || link.roles.includes(userRole);
+              if (!isVisible) return null;
+              
+              return (
+                <Link
+                  key={link.name}
+                  to={link.path}
+                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all duration-200"
+                >
+                  {link.name}
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Right Side - Auth Buttons / User Menu */}
+          <div className="hidden md:flex items-center space-x-3">
+            {!currentUser ? (
               <>
-                <Link to="/student/find-teachers" className="hover:text-indigo-600 transition-colors duration-200">Find Teachers</Link>
-                <Link to="/student/book-class" className="hover:text-indigo-600 transition-colors duration-200">Book Class</Link>
+                <Link
+                  to="/login"
+                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors duration-200"
+                >
+                  Log in
+                </Link>
+                <Link
+                  to="/signup"
+                  className="px-4 py-2 text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors duration-200"
+                >
+                  Get Started
+                </Link>
               </>
+            ) : (
+              <div className="flex items-center space-x-3">
+                <Link
+                  to={userRole === 'student' 
+                    ? (isProfileComplete ? "/student/dashboard" : "/student/profile-setup")
+                    : (isProfileComplete ? "/teacher/dashboard" : "/teacher/profile-setup")
+                  }
+                  className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all duration-200"
+                >
+                  <User className="w-4 h-4" />
+                  <span>Dashboard</span>
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout</span>
+                </button>
+              </div>
             )}
-          </>
-        )}
+          </div>
 
-        {userRole === 'teacher' && (
-          <>
-            <Link 
-              to={isProfileComplete ? "/teacher/dashboard" : "/teacher/profile-setup"} 
-              className="hover:text-purple-600 transition-colors duration-200"
+          {/* Mobile menu button */}
+          <div className="md:hidden">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all duration-200"
             >
-              Dashboard
-            </Link>
-            {isProfileComplete && (
-              <>
-                <Link to="/teacher/schedule" className="hover:text-purple-600 transition-colors duration-200">Schedule</Link>
-                <Link to="/teacher/bookings" className="hover:text-purple-600 transition-colors duration-200">Bookings</Link>
-              </>
+              {isMobileMenuOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <Menu className="w-5 h-5" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Navigation Menu */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden border-t border-slate-200 py-4 space-y-2">
+            {navLinks.map((link) => {
+              const isVisible = link.roles.length === 0 || link.roles.includes(userRole);
+              if (!isVisible) return null;
+              
+              return (
+                <Link
+                  key={link.name}
+                  to={link.path}
+                  className="block px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all duration-200"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  {link.name}
+                </Link>
+              );
+            })}
+            
+            {!currentUser ? (
+              <div className="pt-2 space-y-2">
+                <Link
+                  to="/login"
+                  className="block px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all duration-200"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Log in
+                </Link>
+                <Link
+                  to="/signup"
+                  className="block px-4 py-2 text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors duration-200 text-center"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Get Started
+                </Link>
+              </div>
+            ) : (
+              <div className="pt-2 space-y-2">
+                <Link
+                  to={userRole === 'student' 
+                    ? (isProfileComplete ? "/student/dashboard" : "/student/profile-setup")
+                    : (isProfileComplete ? "/teacher/dashboard" : "/teacher/profile-setup")
+                  }
+                  className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all duration-200"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <User className="w-4 h-4" />
+                  <span>Dashboard</span>
+                </Link>
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="flex items-center space-x-2 w-full px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout</span>
+                </button>
+              </div>
             )}
-          </>
-        )}
-
-        {/* Links for unauthenticated users */}
-        {!currentUser && (
-          <>
-            <Link 
-              to="/login" 
-              className="text-indigo-600 hover:text-indigo-800 px-4 py-2 rounded-lg border border-indigo-600 hover:bg-indigo-50 transition-all duration-200"
-            >
-              Login
-            </Link>
-            <Link 
-              to="/signup" 
-              className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-all duration-200 shadow-md"
-            >
-              Signup
-            </Link>
-          </>
-        )}
-
-        {/* Logout button for authenticated users */}
-        {currentUser && (
-          <button 
-            onClick={handleLogout} 
-            className="text-red-500 hover:text-red-700 transition-colors duration-200 ml-4 font-semibold"
-          >
-            Logout
-          </button>
+          </div>
         )}
       </div>
     </nav>

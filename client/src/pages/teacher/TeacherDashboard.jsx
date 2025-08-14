@@ -84,7 +84,7 @@ const seedTeacherDashboardData = () => {
  * @param {{ icon: React.ElementType, title: string, children: React.ReactNode, className?: string }} props
  */
 const DashboardCard = ({ icon: Icon, title, children, className = '' }) => (
-  <div className={`relative bg-gray-800/60 backdrop-blur-xl p-6 rounded-2xl shadow-2xl border border-gray-700 overflow-hidden
+  <div className={`relative bg-white/60 backdrop-blur-sm p-6 rounded-2xl shadow-sm border border-white/40 overflow-hidden
     transform hover:scale-[1.02] transition-all duration-300 hover:shadow-violet-700/50 ${className}`}>
     <div className="absolute inset-0 bg-gradient-to-br from-violet-900/10 to-purple-900/10 opacity-5 group-hover:opacity-10 transition-opacity duration-300"></div>
     <div className="relative z-10 flex flex-col h-full">
@@ -105,7 +105,7 @@ const DashboardCard = ({ icon: Icon, title, children, className = '' }) => (
  */
 const StatRow = ({ label, value, valueClassName = 'text-purple-300' }) => (
   <div className="flex items-center justify-between p-3 bg-gray-700 rounded-lg shadow-inner border border-gray-600">
-    <span className="text-gray-300 font-medium">{label}:</span>
+    <span className="text-slate-600 font-medium">{label}:</span>
     <span className={`text-xl font-bold ${valueClassName}`}>{value}</span>
   </div>
 );
@@ -268,7 +268,16 @@ export default function TeacherDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-gray-100 font-inter p-4 sm:p-6 lg:p-10">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 text-slate-900 font-inter p-4 sm:p-6 lg:p-10 relative overflow-hidden">
+      {/* Animated gradient orbs for background effect */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/30 to-purple-600/30 rounded-full blur-3xl animate-float"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-purple-400/20 to-pink-600/20 rounded-full blur-3xl animate-float-delayed"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-r from-indigo-400/10 to-blue-600/10 rounded-full blur-3xl animate-float-slow"></div>
+      </div>
+      
+      {/* Content */}
+      <div className="relative z-10">
       {/* Global Message/Toast */}
       {message && (
         <div className={`fixed top-8 left-1/2 -translate-x-1/2 p-4 rounded-xl shadow-lg z-50 flex items-center gap-3 animate-fade-in-down ${
@@ -284,20 +293,20 @@ export default function TeacherDashboard() {
       )}
 
       <header className="text-center mb-10">
-        <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-violet-400 flex items-center justify-center gap-3">
-          <LayoutDashboard className="w-10 h-10 text-purple-400" /> Teacher Dashboard
+        <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center gap-3">
+          <LayoutDashboard className="w-10 h-10 text-blue-600" /> Teacher Dashboard
         </h1>
-        <p className="text-gray-400 mt-2 text-lg">
+        <p className="text-slate-600 mt-2 text-lg">
           Welcome back, <span className="font-semibold text-purple-300">{teacherProfile.firstName || 'Teacher'}!</span>
         </p>
-        <p className="text-gray-500 text-sm">{currentUser.email}</p>
+        <p className="text-slate-500 text-sm">{currentUser.email}</p>
         <div className="flex justify-center mt-4">
           <button
             onClick={() => {
               setToLocalStorage('currentUser', null); // Clear current user
               navigate('/login');
             }}
-            className="px-6 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors duration-200 flex items-center gap-2 shadow-md"
+            className="px-6 py-2 bg-white/60 backdrop-blur-sm text-slate-700 rounded-lg hover:bg-white/80 transition-colors duration-200 flex items-center gap-2 shadow-sm border border-white/40"
           >
             <LogOut className="w-5 h-5" /> Logout
           </button>
@@ -472,6 +481,7 @@ export default function TeacherDashboard() {
           animation: fadeIn 0.3s ease-out forwards;
         }
       `}</style>
+      </div>
     </div>
   );
 }

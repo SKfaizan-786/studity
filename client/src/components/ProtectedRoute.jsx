@@ -55,8 +55,8 @@ const ProtectedRoute = ({ children, allowedRoles, profileCompleteRequired = fals
   // Display a loading spinner while authentication and profile status are being determined
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-violet-50">
-        <div className="flex items-center space-x-3 text-violet-600 text-lg font-medium animate-pulse">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100">
+        <div className="flex items-center space-x-3 text-blue-600 text-lg font-medium animate-pulse">
           <Loader2 className="w-6 h-6 animate-spin" />
           <span>Authenticating...</span>
         </div>
