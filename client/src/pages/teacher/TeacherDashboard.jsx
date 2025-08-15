@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import {
-  CalendarDays, Users, DollarSign, LogOut,  UserRound, ArrowRight, CheckCircle, Wallet, ListChecks, LayoutDashboard, Settings, Loader2, Info, XCircle, Bell, MessageSquare, Award, MonitorCheck
+  CalendarDays, Users, DollarSign, LogOut,  UserRound, ArrowRight, CheckCircle, Wallet, ListChecks, LayoutDashboard, Settings, Loader2, Info, XCircle, Bell, MessageSquare, Award, MonitorCheck, Home, Search, HelpCircle
 } from 'lucide-react';
 
 // Import your storage utility functions
@@ -293,13 +293,34 @@ export default function TeacherDashboard() {
       )}
 
       <header className="text-center mb-10">
-        <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center gap-3">
-          <LayoutDashboard className="w-10 h-10 text-blue-600" /> Teacher Dashboard
-        </h1>
+        <Link to="/" className="inline-block group mb-4">
+          <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center gap-3 group-hover:from-blue-700 group-hover:to-purple-700 transition-all duration-300">
+            <LayoutDashboard className="w-10 h-10 text-blue-600 group-hover:text-blue-700 transition-colors duration-300" /> Teacher Dashboard
+          </h1>
+        </Link>
         <p className="text-slate-600 mt-2 text-lg">
           Welcome back, <span className="font-semibold text-purple-300">{teacherProfile.firstName || 'Teacher'}!</span>
         </p>
         <p className="text-slate-500 text-sm">{currentUser.email}</p>
+        
+        {/* Navigation Links */}
+        <div className="flex justify-center space-x-4 mt-4 mb-4">
+          <Link
+            to="/pricing"
+            className="flex items-center space-x-2 px-4 py-2 bg-white/60 backdrop-blur-sm text-slate-700 rounded-lg hover:bg-white/80 transition-colors duration-200 shadow-sm border border-white/40 group"
+          >
+            <DollarSign className="w-4 h-4 group-hover:text-blue-600 transition-colors duration-200" />
+            <span className="group-hover:text-blue-600 transition-colors duration-200">Pricing</span>
+          </Link>
+          <Link
+            to="/help"
+            className="flex items-center space-x-2 px-4 py-2 bg-white/60 backdrop-blur-sm text-slate-700 rounded-lg hover:bg-white/80 transition-colors duration-200 shadow-sm border border-white/40 group"
+          >
+            <HelpCircle className="w-4 h-4 group-hover:text-blue-600 transition-colors duration-200" />
+            <span className="group-hover:text-blue-600 transition-colors duration-200">Help</span>
+          </Link>
+        </div>
+        
         <div className="flex justify-center mt-4">
           <button
             onClick={() => {

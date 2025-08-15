@@ -445,13 +445,13 @@ const StudentDashboard = () => {
         {/* Sidebar */}
         <aside className={sidebarClass}>
           <div className="relative z-10 flex flex-col h-full">
-            <div className="mb-8 text-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mb-4 mx-auto transform hover:scale-105 transition-all duration-300">
+            <Link to="/" className="mb-8 text-center block group">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mb-4 mx-auto transform group-hover:scale-105 transition-all duration-300 cursor-pointer">
                 <GraduationCap className="w-8 h-8 text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-1">Yuvshiksha</h2>
-              <p className="text-slate-600 text-sm">Student Portal</p>
-            </div>
+              <h2 className="text-2xl font-bold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors duration-200">Yuvshiksha</h2>
+              <p className="text-slate-600 text-sm group-hover:text-slate-700 transition-colors duration-200">Student Portal</p>
+            </Link>
 
             <nav className="space-y-2 mb-8 flex-1">
               <SidebarButton
@@ -502,6 +502,31 @@ const StudentDashboard = () => {
                 isActive={activeMenuItem === 'achievements'}
                 count={5}
               />
+              
+              {/* Navigation Links */}
+              <div className="border-t border-white/20 pt-4 mt-4">
+                <Link
+                  to="/student/find-teachers"
+                  className="flex items-center space-x-3 w-full p-3 text-left text-slate-700 hover:bg-white/40 rounded-xl transition-all duration-200 group"
+                >
+                  <Search className="w-5 h-5 group-hover:text-blue-600 transition-colors duration-200" />
+                  <span className="group-hover:text-blue-600 transition-colors duration-200">Find Teachers</span>
+                </Link>
+                <Link
+                  to="/pricing"
+                  className="flex items-center space-x-3 w-full p-3 text-left text-slate-700 hover:bg-white/40 rounded-xl transition-all duration-200 group"
+                >
+                  <BadgeCent className="w-5 h-5 group-hover:text-blue-600 transition-colors duration-200" />
+                  <span className="group-hover:text-blue-600 transition-colors duration-200">Pricing</span>
+                </Link>
+                <Link
+                  to="/help"
+                  className="flex items-center space-x-3 w-full p-3 text-left text-slate-700 hover:bg-white/40 rounded-xl transition-all duration-200 group"
+                >
+                  <HelpCircle className="w-5 h-5 group-hover:text-blue-600 transition-colors duration-200" />
+                  <span className="group-hover:text-blue-600 transition-colors duration-200">Help</span>
+                </Link>
+              </div>
             </nav>
 
             <div className="mt-auto">
