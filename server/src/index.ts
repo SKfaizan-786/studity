@@ -5,7 +5,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import session from 'express-session';
-import * as passport from 'passport';
+import passport from 'passport';
 import authRoutes from './routes/auth';
 import profileRoutes from './routes/profile';
 import bookingRoutes from './routes/bookings';

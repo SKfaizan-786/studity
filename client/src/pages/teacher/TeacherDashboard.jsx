@@ -82,13 +82,12 @@ const seedTeacherDashboardData = () => {
  * @param {{ icon: React.ElementType, title: string, children: React.ReactNode, className?: string }} props
  */
 const DashboardCard = ({ icon: Icon, title, children, className = '' }) => (
-  <div className={`relative bg-white/60 backdrop-blur-sm p-6 rounded-2xl shadow-sm border border-white/40 overflow-hidden
-    transform hover:scale-[1.02] transition-all duration-300 hover:shadow-violet-700/50 ${className}`}>
-    <div className="absolute inset-0 bg-gradient-to-br from-violet-900/10 to-purple-900/10 opacity-5 group-hover:opacity-10 transition-opacity duration-300"></div>
+  <div className={`relative bg-white/90 shadow-lg p-6 rounded-2xl border border-gray-200 overflow-hidden
+    transform hover:scale-[1.02] transition-all duration-300 hover:shadow-purple-400/40 ${className}`}>
     <div className="relative z-10 flex flex-col h-full">
       <div className="flex items-center gap-3 mb-4">
-        {Icon && <Icon className="w-8 h-8 text-purple-400" />}
-        <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-purple-300">{title}</h2>
+        {Icon && <Icon className="w-8 h-8 text-purple-600" />}
+        <h2 className="text-2xl font-bold text-slate-800">{title}</h2>
       </div>
       <div className="flex-grow flex flex-col justify-center">
         {children}
@@ -101,9 +100,9 @@ const DashboardCard = ({ icon: Icon, title, children, className = '' }) => (
  * A component to display a single statistic row with futuristic styling.
  * @param {{ label: string, value: string | number, valueClassName?: string }} props
  */
-const StatRow = ({ label, value, valueClassName = 'text-purple-300' }) => (
-  <div className="flex items-center justify-between p-3 bg-gray-700 rounded-lg shadow-inner border border-gray-600">
-    <span className="text-slate-600 font-medium">{label}:</span>
+const StatRow = ({ label, value, valueClassName = 'text-purple-700' }) => (
+  <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg shadow-inner border border-gray-200">
+    <span className="text-slate-700 font-medium">{label}:</span>
     <span className={`text-xl font-bold ${valueClassName}`}>{value}</span>
   </div>
 );
@@ -220,21 +219,14 @@ export default function TeacherDashboard() {
 
   // TODO: Replace with actual API calls to backend
   useEffect(() => {
-    if (currentUser && (currentUser.id || currentUser._id)) { // Ensure currentUser and its ID are available
-      setStatsLoading(true);
-      setTimeout(() => {
-        // For now, show zero values until backend APIs are implemented
-        const upcomingSessions = 0;
-        const newInquiries = 0;
-        const totalEarnings = 0;
-
-        setStats({
-          upcomingSessions,
-          newInquiries,
-          totalEarnings,
-        });
-        setStatsLoading(false);
-      }, 1000); // Reduced delay for better UX
+    if (currentUser && (currentUser.id || currentUser._id)) {
+      // For now, show zero values until backend APIs are implemented
+      setStats({
+        upcomingSessions: 0,
+        newInquiries: 0,
+        totalEarnings: 0,
+      });
+      setStatsLoading(false);
     }
   }, [currentUser]);
 
@@ -307,11 +299,11 @@ export default function TeacherDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 text-slate-900 font-inter p-4 sm:p-6 lg:p-10 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-white via-indigo-100 to-purple-100 text-slate-900 font-inter p-4 sm:p-6 lg:p-10 relative overflow-hidden">
       {/* Animated gradient orbs for background effect */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/30 to-purple-600/30 rounded-full blur-3xl animate-float"></div>
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-purple-400/20 to-pink-600/20 rounded-full blur-3xl animate-float-delayed"></div>
+      <div className="absolute inset-0 overflow-hidden pointer-events-none select-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-600/20 rounded-full blur-3xl animate-float"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-purple-400/10 to-pink-600/10 rounded-full blur-3xl animate-float-delayed"></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-r from-indigo-400/10 to-blue-600/10 rounded-full blur-3xl animate-float-slow"></div>
       </div>
       
@@ -450,8 +442,8 @@ export default function TeacherDashboard() {
               />
               {/* Info message when no data */}
               {stats.upcomingSessions === 0 && stats.newInquiries === 0 && stats.totalEarnings === 0 && (
-                <div className="mt-4 p-3 bg-blue-900/50 border border-blue-700 rounded-lg">
-                  <p className="text-blue-200 text-sm flex items-center gap-2">
+                <div className="mt-4 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-blue-700 text-xs font-medium flex items-center gap-1 whitespace-nowrap overflow-x-auto">
                     <Info className="w-4 h-4 text-blue-400" />
                     Data will update when you receive bookings and inquiries.
                   </p>
@@ -474,7 +466,7 @@ export default function TeacherDashboard() {
               <li key={path}>
                 <button
                   onClick={() => navigate(path)}
-                  className="w-full flex items-center gap-4 p-4 bg-gray-700 text-gray-200 rounded-lg hover:bg-gray-600 hover:text-white transition-all duration-200 font-semibold shadow-md hover:shadow-xl transform hover:scale-[1.01]"
+                  className="w-full flex items-center gap-4 p-4 bg-gray-100 text-slate-800 rounded-lg hover:bg-gray-200 hover:text-purple-700 transition-all duration-200 font-semibold shadow-sm hover:shadow-md transform hover:scale-[1.01]"
                 >
                   <Icon className="w-6 h-6 text-purple-400" />
                   <span>{label}</span>
