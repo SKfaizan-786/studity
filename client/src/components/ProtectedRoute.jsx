@@ -85,7 +85,7 @@ const ProtectedRoute = ({ children, allowedRoles, profileCompleteRequired = fals
   const currentProfileCompleteStatus = !!currentUser.profileComplete; // Ensure boolean value
 
   // Scenario A: Route requires profile to be COMPLETE (e.g., Dashboards)
-  if (profileCompleteRequired) {
+  if (profileCompleteRequired === true) {
     if (!currentProfileCompleteStatus) {
       // User has the allowed role, but their profile is NOT complete as required by the route.
       console.log(`ProtectedRoute: Profile incomplete for ${currentUser.role}. Redirecting to profile setup.`);
@@ -99,7 +99,7 @@ const ProtectedRoute = ({ children, allowedRoles, profileCompleteRequired = fals
     // If profile IS complete and required, proceed to render children (the protected page).
   }
   // Scenario B: Route is a PROFILE SETUP page (profileCompleteRequired = false)
-  else {
+  else if (profileCompleteRequired === false) {
     if (currentProfileCompleteStatus) {
       // User has the allowed role, their profile IS complete, but they are trying to access a setup page.
       // Redirect them to their dashboard as their profile is already set up.
@@ -113,6 +113,7 @@ const ProtectedRoute = ({ children, allowedRoles, profileCompleteRequired = fals
     }
     // If profile is NOT complete and it's a setup page, proceed to render children.
   }
+  // Scenario C: profileCompleteRequired is null - allow access regardless of profile completion status
 
   // If all authorization and profile completion checks pass, render the child components (the protected page).
   return children;

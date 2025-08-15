@@ -114,6 +114,94 @@ const StudentProfileForm = () => {
     setUiState(prev => ({ ...prev, userLoaded: true }));
   }, []);
 
+  // Add this useEffect to load existing profile data around line 100
+  useEffect(() => {
+    const loadUserData = async () => {
+      const storedUser = getFromLocalStorage('currentUser', null);
+      if (storedUser && storedUser.role === 'student') {
+        // Try to fetch fresh data from backend if token exists
+        try {
+          const token = localStorage.getItem('token');
+          if (token) {
+            const cleanToken = token.replace(/^"(.*)"$/, '$1');
+            const response = await fetch('http://localhost:5000/api/profile/student', {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${cleanToken}`,
+                'Content-Type': 'application/json'
+              }
+            });
+
+            if (response.ok) {
+              const profileData = await response.json();
+              const studentProfile = profileData.studentProfile || {};
+              
+              setFormData(prev => ({
+                ...prev,
+                firstName: profileData.firstName || storedUser.firstName || '',
+                lastName: profileData.lastName || storedUser.lastName || '',
+                email: profileData.email || storedUser.email || '',
+                grade: studentProfile.grade || '',
+                subjects: studentProfile.subjects || [],
+                parentEmail: studentProfile.parentEmail || '',
+                phone: studentProfile.phone || '',
+                location: studentProfile.location || '',
+                learningGoals: studentProfile.learningGoals || [],
+                preferredLearningStyle: studentProfile.preferredLearningStyle || '',
+                bio: studentProfile.bio || ''
+              }));
+
+              if (studentProfile.photoUrl) {
+                setUiState(prev => ({
+                  ...prev,
+                  photoPreviewUrl: studentProfile.photoUrl
+                }));
+              }
+            } else {
+              // Fallback to localStorage data
+              loadFromLocalStorage(storedUser);
+            }
+          } else {
+            // No token, use localStorage
+            loadFromLocalStorage(storedUser);
+          }
+        } catch (error) {
+          console.warn('Failed to fetch from backend, using localStorage:', error);
+          loadFromLocalStorage(storedUser);
+        }
+      }
+      setUiState(prev => ({ ...prev, userLoaded: true }));
+    };
+
+    const loadFromLocalStorage = (storedUser) => {
+      const studentProfile = storedUser.studentProfile || {};
+      
+      setFormData(prev => ({
+        ...prev,
+        firstName: storedUser.firstName || '',
+        lastName: storedUser.lastName || '',
+        email: storedUser.email || '',
+        grade: studentProfile.grade || '',
+        subjects: studentProfile.subjects || [],
+        parentEmail: studentProfile.parentEmail || '',
+        phone: studentProfile.phone || '',
+        location: studentProfile.location || '',
+        learningGoals: studentProfile.learningGoals || [],
+        preferredLearningStyle: studentProfile.preferredLearningStyle || '',
+        bio: studentProfile.bio || ''
+      }));
+
+      if (studentProfile.photoUrl) {
+        setUiState(prev => ({
+          ...prev,
+          photoPreviewUrl: studentProfile.photoUrl
+        }));
+      }
+    };
+
+    loadUserData();
+  }, []);
+
   // Auto-save functionality
   useEffect(() => {
     if (!uiState.userLoaded) return; // Don't auto-save before user data is loaded
@@ -235,64 +323,76 @@ const StudentProfileForm = () => {
   }, []);
 
   const handleSubmit = useCallback(async () => {
+    console.log('Submitting:', formData);
     setUiState(prev => ({ ...prev, isSubmitting: true }));
-    let formHasErrors = false;
-
-    // Validate all required fields across all steps
-    // Flatten all required fields from all steps for final validation
-    const allRequiredFields = Object.values(stepRequiredFields).flat();
-
-    allRequiredFields.forEach(field => {
-      const hasError = !validateField(field, formData[field]);
-      if (hasError) formHasErrors = true;
-    });
-
-    // Also check for any existing errors set by previous validations that might not be on the current step's required list
-    if (Object.values(uiState.errors).some(error => error !== '')) {
-        formHasErrors = true;
-    }
-
-    if (formHasErrors) {
-      showMessage('Please fix the errors in your form before submitting.', 'error');
-      setUiState(prev => ({ ...prev, isSubmitting: false }));
-      return;
-    }
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // --- REPLACED localStorage.getItem with getFromLocalStorage ---
-      const storedUser = getFromLocalStorage('currentUser', null);
-      if (storedUser && storedUser.role === 'student') {
-        const dataToSave = { ...formData };
-        if (uiState.photoPreviewUrl) {
-            dataToSave.photoPreviewUrl = uiState.photoPreviewUrl;
-        } else {
-            delete dataToSave.photoPreviewUrl;
-        }
-        delete dataToSave.photo;
-
-        const updatedUser = {
-          ...storedUser,
-          profileComplete: true,
-          studentProfileData: dataToSave
+      const token = localStorage.getItem('token');
+      if (token) {
+        const cleanToken = token.replace(/^"(.*)"$/, '$1');
+        
+        const profileData = {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          studentProfile: {
+            phone: formData.phone,
+            location: formData.location,
+            grade: formData.subject, // Using subject as grade
+            subjects: [formData.learningInterest], // Using learning interest as subjects
+            learningGoals: formData.goals.map(g => g.text), // Convert goals to string array
+            bio: formData.bio,
+            photoUrl: uiState.photoPreviewUrl
+          }
         };
-        // --- REPLACED localStorage.setItem with setToLocalStorage ---
-        setToLocalStorage('currentUser', updatedUser);
 
-        // --- REPLACED localStorage.getItem with getFromLocalStorage ---
-        const allUsers = getFromLocalStorage('registeredUsers', []);
-        // --- REPLACED localStorage.setItem with setToLocalStorage ---
-        const updatedAllUsers = allUsers.map(user =>
-            user.email === storedUser.email ? updatedUser : user
-        );
-        setToLocalStorage('registeredUsers', updatedAllUsers);
+        const response = await fetch('http://localhost:5000/api/profile/student', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${cleanToken}`
+          },
+          body: JSON.stringify(profileData)
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          const updatedUser = {
+            ...getFromLocalStorage('currentUser'),
+            ...result.user,
+            profileComplete: true
+          };
+          
+          setToLocalStorage('currentUser', updatedUser);
+          
+          showMessage('Student profile saved successfully! 🎉', 'success');
+          setTimeout(() => navigate('/student/dashboard'), 1500);
+          return;
+        }
       }
 
-      showMessage('Student profile submitted successfully! 🎉', 'success');
-      // Delay navigation slightly to allow message to be seen
-      setTimeout(() => navigate('/student/dashboard'), 1500); // Redirect to the student dashboard
+      // Fallback to localStorage save if backend fails
+      const currentUser = getFromLocalStorage('currentUser');
+      if (currentUser) {
+        const updatedUser = {
+          ...currentUser,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          profileComplete: true,
+          studentProfile: {
+            phone: formData.phone,
+            location: formData.location,
+            grade: formData.subject,
+            subjects: [formData.learningInterest],
+            learningGoals: formData.goals.map(g => g.text),
+            bio: formData.bio,
+            photoUrl: uiState.photoPreviewUrl
+          }
+        };
 
+        setToLocalStorage('currentUser', updatedUser);
+        showMessage('Student profile submitted successfully! 🎉', 'success');
+        setTimeout(() => navigate('/student/dashboard'), 1500);
+      }
     } catch (error) {
       console.error('Error submitting profile:', error);
       showMessage('Error submitting profile. Please try again.', 'error');
@@ -335,7 +435,7 @@ const StudentProfileForm = () => {
 
     return (
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+        <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
           {icon} {label} {isRequired && <span className="text-red-500">*</span>}
         </label>
         {isTextArea ? (
@@ -373,7 +473,7 @@ const StudentProfileForm = () => {
 
     return (
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+        <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
           {icon} {label} {isRequired && <span className="text-red-500">*</span>}
         </label>
         <select
@@ -537,7 +637,7 @@ const StudentProfileForm = () => {
                     {renderInputField('Tell us about yourself', 'bio', 'text', <Edit3 className="w-4 h-4 text-violet-600" />, 'Share your interests, hobbies, or anything you\'d like your tutor to know...', false, true)}
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                      <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                         <Star className="w-4 h-4 text-violet-600" /> Learning Goals (Optional)
                       </label>
                       <div className="flex gap-2 mb-3">
@@ -577,7 +677,7 @@ const StudentProfileForm = () => {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                      <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                         <Camera className="w-4 h-4 text-violet-600" /> Profile Photo (Optional)
                       </label>
                       <div className="flex items-center gap-4">

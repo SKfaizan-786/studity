@@ -5,10 +5,15 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import session from 'express-session';
-import passport from 'passport';
+import * as passport from 'passport';
 import authRoutes from './routes/auth';
 import profileRoutes from './routes/profile';
-import './passport';
+import bookingRoutes from './routes/bookings';
+import teacherRoutes from './routes/teachers';
+
+// Initialize passport configuration
+// Change this line to the new file name
+import './passport-config'; // ✅ CORRECT IMPORT
 
 dotenv.config();
 
@@ -37,8 +42,8 @@ app.use(session({
 }));
 
 // Passport
-app.use(passport.initialize());
-app.use(passport.session());
+app.use(passport.initialize()); // This will now correctly use the npm package
+app.use(passport.session()); // This will now correctly use the npm package
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI as string)
@@ -50,6 +55,8 @@ console.log("RESEND_API_KEY:", process.env.RESEND_API_KEY);
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/teachers', teacherRoutes);
 
 // Root Route
 app.get('/', (_req, res) => {

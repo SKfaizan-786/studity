@@ -1,5 +1,5 @@
-// src/index.d.ts
-import { IUser } from './models/User'; // Ensure 'IUser' is correctly imported from your User model
+// src/types/express/index.d.ts
+import { IUser } from '../../models/User'; // Fixed import path
 
 declare global {
   namespace Express {

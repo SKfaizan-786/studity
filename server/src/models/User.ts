@@ -28,9 +28,13 @@ export interface IAvailability {
 }
 
 export interface IStudentProfile {
+  phone?: string;
+  location?: string;
   grade?: string;
   subjects?: string[];
-  parentEmail?: string;
+  learningGoals?: string[];
+  bio?: string;
+  photoUrl?: string;
 }
 
 export interface ITeacherProfile {
@@ -50,6 +54,8 @@ export interface ITeacherProfile {
   hourlyRate?: number;
   photoUrl?: string;
   availability?: IAvailability[];
+  isListed?: boolean; // Add this field
+  listedAt?: Date; // Optional: track when teacher got listed
 }
 
 export interface IUser extends Document {
@@ -112,8 +118,15 @@ const TeacherProfileSchema = new Schema({
   achievements: [TeachingAchievementSchema],
   hourlyRate: Number,
   photoUrl: String,
-  availability: [AvailabilitySchema]
-});
+  availability: [AvailabilitySchema],
+  isListed: { 
+    type: Boolean, 
+    default: false // Default to false (not listed)
+  },
+  listedAt: { 
+    type: Date 
+  }
+}, { timestamps: true });
 
 const UserSchema = new Schema<IUser>(
   {
@@ -162,9 +175,13 @@ const UserSchema = new Schema<IUser>(
       default: false,
     },
     studentProfile: {
+      phone: String,
+      location: String,
       grade: String,
       subjects: [String],
-      parentEmail: String,
+      learningGoals: [String],
+      bio: String,
+      photoUrl: String,
     },
     teacherProfile: TeacherProfileSchema,
   },

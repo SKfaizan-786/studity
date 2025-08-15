@@ -94,10 +94,73 @@ const TeacherProfileForm = () => {
 
   // Effect to load user data from localStorage on component mount
   useEffect(() => {
-    // --- REPLACED localStorage.getItem with getFromLocalStorage ---
-    const storedUser = getFromLocalStorage('currentUser', null);
-    if (storedUser && storedUser.role === 'teacher') {
-      const teacherProfileData = storedUser.teacherProfileData || {};
+    const loadUserData = async () => {
+      // First try to get from localStorage
+      const storedUser = getFromLocalStorage('currentUser', null);
+      if (storedUser && storedUser.role === 'teacher') {
+        // Try to fetch fresh data from backend if token exists
+        try {
+          const token = localStorage.getItem('token');
+          if (token) {
+            const cleanToken = token.replace(/^"(.*)"$/, '$1');
+            const response = await fetch('http://localhost:5000/api/profile/teacher', {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${cleanToken}`,
+                'Content-Type': 'application/json'
+              }
+            });
+
+            if (response.ok) {
+              const profileData = await response.json();
+              // Use backend data if available
+              const teacherProfileData = profileData.teacherProfile || {};
+              
+              setFormData(prev => ({
+                ...prev,
+                firstName: profileData.firstName || storedUser.firstName || '',
+                lastName: profileData.lastName || storedUser.lastName || '',
+                email: profileData.email || storedUser.email || '',
+                phone: teacherProfileData.phone || '',
+                location: teacherProfileData.location || '',
+                qualifications: teacherProfileData.qualifications || '',
+                experienceYears: teacherProfileData.experienceYears || '',
+                currentOccupation: teacherProfileData.currentOccupation || '',
+                subjectsTaught: teacherProfileData.subjects || teacherProfileData.subjectsTaught || [],
+                boardsTaught: teacherProfileData.boards || teacherProfileData.boardsTaught || [],
+                classesTaught: teacherProfileData.classes || teacherProfileData.classesTaught || [],
+                teachingMode: teacherProfileData.teachingMode || '',
+                preferredSchedule: teacherProfileData.preferredSchedule || '',
+                bio: teacherProfileData.bio || '',
+                teachingApproach: teacherProfileData.teachingApproach || '',
+                achievements: teacherProfileData.achievements || [],
+                hourlyRate: teacherProfileData.hourlyRate || '',
+              }));
+
+              if (teacherProfileData.photoUrl) {
+                setUiState(prev => ({
+                  ...prev,
+                  photoPreviewUrl: teacherProfileData.photoUrl
+                }));
+              }
+            } else {
+              // Fallback to localStorage data
+              loadFromLocalStorage(storedUser);
+            }
+          } else {
+            // No token, use localStorage
+            loadFromLocalStorage(storedUser);
+          }
+        } catch (error) {
+          console.warn('Failed to fetch from backend, using localStorage:', error);
+          loadFromLocalStorage(storedUser);
+        }
+      }
+      setUiState(prev => ({ ...prev, userLoaded: true }));
+    };
+
+    const loadFromLocalStorage = (storedUser) => {
+      const teacherProfileData = storedUser.teacherProfileData || storedUser.teacherProfile || {};
 
       setFormData(prev => ({
         ...prev,
@@ -109,9 +172,9 @@ const TeacherProfileForm = () => {
         qualifications: teacherProfileData.qualifications || '',
         experienceYears: teacherProfileData.experienceYears || '',
         currentOccupation: teacherProfileData.currentOccupation || '',
-        subjectsTaught: teacherProfileData.subjectsTaught || [],
-        boardsTaught: teacherProfileData.boardsTaught || [],
-        classesTaught: teacherProfileData.classesTaught || [],
+        subjectsTaught: teacherProfileData.subjectsTaught || teacherProfileData.subjects || [],
+        boardsTaught: teacherProfileData.boardsTaught || teacherProfileData.boards || [],
+        classesTaught: teacherProfileData.classesTaught || teacherProfileData.classes || [],
         teachingMode: teacherProfileData.teachingMode || '',
         preferredSchedule: teacherProfileData.preferredSchedule || '',
         bio: teacherProfileData.bio || '',
@@ -120,14 +183,15 @@ const TeacherProfileForm = () => {
         hourlyRate: teacherProfileData.hourlyRate || '',
       }));
 
-      if (teacherProfileData.photoPreviewUrl) {
+      if (teacherProfileData.photoPreviewUrl || teacherProfileData.photoUrl) {
         setUiState(prev => ({
           ...prev,
-          photoPreviewUrl: teacherProfileData.photoPreviewUrl
+          photoPreviewUrl: teacherProfileData.photoPreviewUrl || teacherProfileData.photoUrl
         }));
       }
-    }
-    setUiState(prev => ({ ...prev, userLoaded: true }));
+    };
+
+    loadUserData();
   }, []);
 
   // Auto-save functionality
@@ -149,8 +213,8 @@ const TeacherProfileForm = () => {
           ...storedUser,
           firstName: formData.firstName,
           lastName: formData.lastName,
-          teacherProfile: {
-            ...storedUser.teacherProfile,
+          teacherProfileData: {
+            ...storedUser.teacherProfileData,
             ...dataToSave
           }
         };
@@ -332,7 +396,10 @@ const TeacherProfileForm = () => {
       const updatedUser = {
         ...currentUser,
         ...result.user,
-        profileComplete: true
+        profileComplete: true,
+        // Ensure we save both formats for compatibility
+        teacherProfileData: result.user.teacherProfile || currentUser.teacherProfileData,
+        teacherProfile: result.user.teacherProfile || currentUser.teacherProfile
       };
 
       setToLocalStorage('currentUser', updatedUser);

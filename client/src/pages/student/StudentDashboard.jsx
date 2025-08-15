@@ -376,6 +376,8 @@ const StudentDashboard = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [activeMenuItem, setActiveMenuItem] = useState('dashboard'); // State for active sidebar item
   const [dashboardData, setDashboardData] = useState(null); // All data for the dashboard
+  const [mockTeachers, setMockTeachers] = useState([]); // For storing teacher data
+  const [loading, setLoading] = useState(false); // For loading state
 
   // Effect to load current user and dashboard data
   useEffect(() => {
@@ -405,6 +407,114 @@ const StudentDashboard = () => {
     }, 15000); // Mark one unread notification as read every 15 seconds
 
     return () => clearInterval(interval);
+  }, [navigate]);
+
+  // Update the fetchTeachers function to only get listed teachers
+  const fetchTeachers = async () => {
+    try {
+      setLoading(true);
+      
+      // Try API first
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const response = await fetch('/api/teachers/list', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (response.ok) {
+            const teachers = await response.json();
+            setMockTeachers(teachers);
+            return;
+          }
+        } catch (apiError) {
+          console.log('API not available, using localStorage...');
+        }
+      }
+      
+      // Fallback to localStorage - only show listed teachers
+      const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+      const listedTeachers = allUsers.filter(user => 
+        user.role === 'teacher' && 
+        user.teacherProfile && 
+        user.teacherProfile.isListed === true // Only listed teachers
+      );
+      
+      setMockTeachers(listedTeachers);
+      
+    } catch (error) {
+      console.error('Error fetching teachers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Update the useEffect to call fetchTeachers
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const currentUser = getFromLocalStorage('currentUser');
+        if (!currentUser || currentUser.role !== 'student') {
+          navigate('/login');
+          return;
+        }
+
+        // Check if profile is complete
+        if (!currentUser.profileComplete) {
+          navigate('/student/profile');
+          return;
+        }
+
+        // Try to fetch fresh data from backend if token exists
+        const token = localStorage.getItem('token');
+        if (token) {
+          try {
+            const cleanToken = token.replace(/^"(.*)"$/, '$1');
+            const response = await fetch('http://localhost:5000/api/profile/student', {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${cleanToken}`,
+                'Content-Type': 'application/json'
+              }
+            });
+
+            if (response.ok) {
+              const profileData = await response.json();
+              if (!profileData.profileComplete) {
+                navigate('/student/profile');
+                return;
+              }
+              setCurrentUser(profileData);
+              setToLocalStorage('currentUser', profileData);
+            }
+          } catch (error) {
+            console.warn('Failed to fetch from backend, using localStorage:', error);
+            // Fallback to localStorage
+            if (!currentUser.profileComplete) {
+              navigate('/student/profile');
+              return;
+            }
+          }
+        } else {
+          // No token, use localStorage
+          if (!currentUser.profileComplete) {
+            navigate('/student/profile');
+            return;
+          }
+        }
+
+        setCurrentUser(currentUser);
+        setDashboardData(getSampleStudentData(currentUser.firstName));
+        await fetchTeachers();
+      } catch (error) {
+        console.error('Error loading dashboard:', error);
+        navigate('/login');
+      }
+    };
+
+    fetchData();
   }, [navigate]);
 
   const unseenNotificationsCount = dashboardData?.notifications.filter(n => !n.read).length || 0;

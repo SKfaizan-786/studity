@@ -1,8 +1,13 @@
 // src/middleware/authMiddleware.ts
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import User from '../models/User'; // Ensure this path is correct
+import User, { IUser } from '../models/User'; // Ensure this path is correct
 import mongoose from 'mongoose'; // Keep this import
+
+// Define AuthenticatedRequest interface
+export interface AuthenticatedRequest extends Request {
+  user?: IUser;
+}
 
 // !!! REMOVE THE 'declare global' BLOCK FROM HERE !!!
 // It should NOT be in this file. It belongs in a .d.ts file.
@@ -16,7 +21,7 @@ declare global {
 }
 */
 
-export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+export const authMiddleware = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   // ... (rest of your authMiddleware code, including the new mongoose.Types.ObjectId(decoded._id) line)
   try {
     let token = req.header('Authorization');
