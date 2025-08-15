@@ -1,4 +1,3 @@
-// src/middleware/authMiddleware.ts
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import User, { IUser } from '../models/User'; // Ensure this path is correct
@@ -31,37 +30,97 @@ export const authMiddleware = async (req: AuthenticatedRequest, res: Response, n
       return res.status(401).json({ message: 'No token, authorization denied' });
     }
 
-    // Clean the token: remove 'Bearer ' prefix and any surrounding quotes
-    token = token.replace(/^"|"$/g, '').replace('Bearer ', '');
+    // Extract token (remove 'Bearer ' prefix)
+    const token = authHeader.substring(7);
 
-    if (!process.env.JWT_SECRET) {
-      console.error('JWT_SECRET is not defined in environment variables.');
-      return res.status(500).json({ message: 'Server configuration error' });
+    // 2. Verify JWT token
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      res.status(500).json({ 
+        message: 'JWT secret not configured' 
+      });
+      return;
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET) as { _id: string; iat: number; exp: number };
-    console.log('Decoded token:', decoded);
+    const decoded = jwt.verify(token, jwtSecret) as JwtPayload;
 
-    // Explicitly convert the decoded._id string to a Mongoose ObjectId
-    const userId = new mongoose.Types.ObjectId(decoded._id);
-    console.log('Searching for user with ID (explicit ObjectId):', userId);
-
-    const user = await User.findById(userId).select('-password'); // Use the explicitly converted ObjectId
-
-    console.log('Result of User.findById in authMiddleware:', user ? 'User found' : 'User NOT found');
-
+    // 3. Find user in database
+    const user = await User.findById(decoded._id).select('-password');
+    
     if (!user) {
-      console.log('User not found for token');
-      return res.status(401).json({ message: 'User not found or token invalid' });
+      res.status(401).json({ 
+        message: 'Token is valid but user not found' 
+      });
+      return;
     }
 
-    req.user = user; // This 'user' property will now correctly pick up the type from index.d.ts
+    // 4. Attach user to request object
+    req.user = user;
+
+    // 5. Continue to next middleware/route handler
     next();
-  } catch (err) {
-    console.error('Auth middleware error:', err);
-    if (err instanceof jwt.JsonWebTokenError) {
-      return res.status(401).json({ message: 'Token is not valid' });
+
+  } catch (error) {
+    // Handle different JWT errors
+    if (error instanceof jwt.JsonWebTokenError) {
+      res.status(401).json({ 
+        message: 'Invalid token' 
+      });
+      return;
     }
-    res.status(500).json({ message: 'Server Error during authentication' });
+    
+    if (error instanceof jwt.TokenExpiredError) {
+      res.status(401).json({ 
+        message: 'Token has expired' 
+      });
+      return;
+    }
+
+    console.error('Auth middleware error:', error);
+    res.status(500).json({ 
+      message: 'Server error during authentication' 
+    });
+  }
+};
+
+/**
+ * Optional Auth Middleware - Same as authMiddleware but doesn't block if no token
+ * Useful for routes that work for both authenticated and non-authenticated users
+ */
+export const optionalAuthMiddleware = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization;
+    
+    // If no token, just continue without setting req.user
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      next();
+      return;
+    }
+
+    const token = authHeader.substring(7);
+    const jwtSecret = process.env.JWT_SECRET;
+    
+    if (!jwtSecret) {
+      next();
+      return;
+    }
+
+    const decoded = jwt.verify(token, jwtSecret) as JwtPayload;
+    const user = await User.findById(decoded._id).select('-password');
+    
+    if (user) {
+      req.user = user;
+    }
+
+    next();
+
+  } catch (error) {
+    // Don't block the request if token is invalid in optional auth
+    console.log('Optional auth middleware error (non-blocking):', error);
+    next();
   }
 };

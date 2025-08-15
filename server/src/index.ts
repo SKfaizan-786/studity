@@ -31,7 +31,7 @@ app.use(morgan('dev'));
 
 // Session
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'studity-secret',
+  secret: process.env.SESSION_SECRET || 'yuvshiksha-secret',
   resave: false,
   saveUninitialized: false,
   cookie: {

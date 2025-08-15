@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 
 // Shared Components
 // Paths are relative to the App.jsx file itself, assuming it's in the 'src' directory.
@@ -19,12 +19,14 @@ import Unauthorized from "./pages/utils/Unauthorized.jsx";
 // Student Pages
 import StudentDashboard from "./pages/student/StudentDashboard.jsx";
 import StudentProfileForm from "./pages/student/StudentProfileForm.jsx";
+import StudentProfile from "./pages/student/StudentProfile.jsx";
 import TeacherList from "./pages/student/TeacherList.jsx";
 import BookClass from "./pages/student/BookClass.jsx";
 
 // Teacher Pages
 import TeacherDashboard from "./pages/teacher/TeacherDashboard.jsx";
 import TeacherProfileForm from "./pages/teacher/TeacherProfileForm.jsx";
+import TeacherProfile from "./pages/teacher/TeacherProfile.jsx";
 import TeacherScheduleForm from "./pages/teacher/TeacherScheduleForm.jsx";
 import Bookings from "./pages/teacher/Bookings.jsx";
 
@@ -35,9 +37,30 @@ const USER_ROLES = {
 };
 
 function App() {
+  const location = useLocation();
+  
+  // Define routes where navbar should NOT be shown
+  const noNavbarRoutes = [
+    '/login',
+    '/signup',
+    '/student/dashboard',
+    '/teacher/dashboard',
+    '/student/profile-setup',
+    '/teacher/profile-setup',
+    '/student/profile',
+    '/teacher/profile',
+    '/student/find-teachers',
+    '/student/book-class',
+    '/teacher/schedule',
+    '/teacher/bookings'
+  ];
+  
+  // Check if current route should show navbar
+  const shouldShowNavbar = !noNavbarRoutes.includes(location.pathname);
+
   return (
     <>
-      <Navbar />
+      {shouldShowNavbar && <Navbar />}
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Landing />} />
@@ -83,6 +106,15 @@ function App() {
             </ProtectedRoute>
           }
         />
+        {/* Student Profile View: Redirect to profile setup */}
+        <Route
+          path="/student/profile"
+          element={
+            <ProtectedRoute allowedRoles={[USER_ROLES.STUDENT]} profileCompleteRequired={true}>
+              <StudentProfile />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Teacher Routes */}
         {/* Teacher Profile Setup: Requires teacher role, profile can be incomplete or complete */}
@@ -117,6 +149,15 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={[USER_ROLES.TEACHER]} profileCompleteRequired={true}>
               <Bookings />
+            </ProtectedRoute>
+          }
+        />
+        {/* Teacher Profile View: Redirect to profile setup */}
+        <Route
+          path="/teacher/profile"
+          element={
+            <ProtectedRoute allowedRoles={[USER_ROLES.TEACHER]} profileCompleteRequired={true}>
+              <TeacherProfile />
             </ProtectedRoute>
           }
         />

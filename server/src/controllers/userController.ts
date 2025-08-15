@@ -9,8 +9,8 @@ export const registerUser = async (req: Request, res: Response) => {
 
     await sendEmail(
       email,
-      'Welcome to Studity!',
-      `<h2>Hi ${name},</h2><p>Thanks for joining Studity!</p>`
+      'Welcome to Yuvshiksha!',
+      `<h2>Hi ${name},</h2><p>Thanks for joining Yuvshiksha!</p>`
     );
 
     res.status(200).json({ message: 'Registration successful and email sent' });

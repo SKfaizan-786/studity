@@ -43,7 +43,7 @@ const transporter = nodemailer.createTransport({
 export const sendEmail = async (to: string, subject: string, html: string) => {
   try {
     const info = await transporter.sendMail({
-      from: '"Studity" <no-reply@studity.dev>', // Can be any fake sender
+      from: '"Yuvshiksha" <no-reply@yuvshiksha.dev>', // Can be any fake sender
       to,
       subject,
       html,

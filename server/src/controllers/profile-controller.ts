@@ -1,6 +1,6 @@
-import { Response } from 'express';
-import User, { IUser } from '../models/User';
-import { AuthenticatedRequest } from '../middleware/authMiddleware';
+import { Request, Response } from 'express';
+import User, { IStudentProfile, ITeacherProfile, IUser } from '../models/User';
+import { getAuthenticatedUser } from '../utils/authHelpers';
 
 // Utility to extract error message
 const getErrorMessage = (error: unknown): string =>
@@ -72,13 +72,9 @@ export const updateTeacherProfile = async (req: AuthenticatedRequest, res: Respo
 
 export const getTeacherProfile = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    if (!req.user?._id) {
-      return res.status(401).json({ message: 'Not authenticated' });
-    }
-
-    const user = await User.findById(req.user._id)
-      .select('-password -resetPasswordToken -resetPasswordExpires') as IUser | null;
-
+    const authenticatedUser = getAuthenticatedUser(req);
+    const user = await User.findById(authenticatedUser._id).select('-password');
+    
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
