@@ -387,12 +387,13 @@ const TeacherProfileForm = () => {
   const renderInputField = useCallback((label, name, type = 'text', icon, placeholder, isRequired = false, isTextArea = false) => {
     const value = formData[name];
     const error = uiState.errors[name];
-    const inputClasses = `w-full p-4 border rounded-xl transition-all duration-200 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 ${error ? 'border-red-500 bg-red-50' : 'border-gray-300'
-      } shadow-sm hover:shadow-md`;
+    const inputClasses = `w-full p-4 bg-white/70 backdrop-blur-sm border border-white/30 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 shadow-sm hover:bg-white/80 ${
+      error ? 'border-red-400 bg-red-50/70' : ''
+    }`;
 
     return (
       <div>
-        <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+        <label className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
           {icon} {label} {isRequired && <span className="text-red-500">*</span>}
         </label>
         {isTextArea ? (
@@ -424,12 +425,13 @@ const TeacherProfileForm = () => {
   const renderSelectField = useCallback((label, name, icon, options, placeholder, isRequired = false) => {
     const value = formData[name];
     const error = uiState.errors[name];
-    const selectClasses = `w-full p-4 border rounded-xl transition-all duration-200 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 ${error ? 'border-red-500 bg-red-50' : 'border-gray-300'
-      } shadow-sm hover:shadow-md`;
+    const selectClasses = `w-full p-4 bg-white/70 backdrop-blur-sm border border-white/30 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 shadow-sm hover:bg-white/80 ${
+      error ? 'border-red-400 bg-red-50/70' : ''
+    }`;
 
     return (
       <div>
-        <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+        <label className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
           {icon} {label} {isRequired && <span className="text-red-500">*</span>}
         </label>
         <select
@@ -455,7 +457,7 @@ const TeacherProfileForm = () => {
   const renderTagInputField = useCallback((label, name, inputStateName, icon, placeholder, isRequired = false) => {
     const tags = formData[name];
     const error = uiState.errors[name];
-    const inputClasses = `flex-1 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-violet-500 shadow-sm`;
+    const inputClasses = `flex-1 p-3 bg-white/70 backdrop-blur-sm border border-white/30 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 shadow-sm hover:bg-white/80`;
 
     return (
       <div>
@@ -475,13 +477,13 @@ const TeacherProfileForm = () => {
           <button
             type="button"
             onClick={() => addTag(name, inputStateName, name)}
-            className="px-4 py-3 bg-violet-600 text-white rounded-xl hover:bg-violet-700 transition-colors transform hover:scale-105 shadow-md"
+            className="px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors transform hover:scale-105 shadow-md"
           >
             Add
           </button>
         </div>
         {tags.length > 0 && (
-          <div className="space-y-2 p-3 bg-violet-50 rounded-xl border border-violet-100">
+          <div className="space-y-2 p-3 bg-blue-50/60 backdrop-blur-sm rounded-xl border border-blue-200/40">
             {tags.map((tag) => (
               <div key={tag.id} className="flex items-center justify-between bg-white p-3 rounded-xl shadow-sm">
                 <span className="text-gray-700">{tag.text}</span>
@@ -505,8 +507,8 @@ const TeacherProfileForm = () => {
   // If user data hasn't loaded yet, show a loading state
   if (!uiState.userLoaded) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-violet-50">
-        <div className="flex items-center space-x-3 text-violet-600 text-lg font-medium animate-pulse">
+      <div className="min-h-screen flex items-center justify-center bg-blue-50">
+        <div className="flex items-center space-x-3 text-blue-600 text-lg font-medium animate-pulse">
           <Loader2 className="w-6 h-6 animate-spin" />
           <span>Loading profile...</span>
         </div>
@@ -515,19 +517,30 @@ const TeacherProfileForm = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Header with progress */}
-        <div className="bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-3xl p-8 mb-8 relative overflow-hidden shadow-xl">
-          <div className="absolute inset-0 bg-black/10 backdrop-blur-sm"></div>
-          <div className="relative z-10">
-            <h1 className="text-4xl font-bold mb-2">Teacher Profile</h1>
-            <p className="text-violet-100 mb-4">Showcase your expertise and connect with students</p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 relative overflow-hidden">
+      {/* Background decorative elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-10 left-10 w-72 h-72 bg-blue-400/20 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float"></div>
+        <div className="absolute top-40 right-10 w-72 h-72 bg-purple-400/20 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float-delayed"></div>
+        <div className="absolute -bottom-8 left-20 w-72 h-72 bg-indigo-400/20 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float-slow"></div>
+      </div>
+
+      <div className="relative z-10 p-4 sm:p-6 lg:p-8">
+        <div className="max-w-6xl mx-auto">
+          {/* Header with progress */}
+          <div className="bg-white/60 backdrop-blur-xl border border-white/20 rounded-2xl p-8 mb-8 shadow-xl">
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl mb-4 shadow-lg">
+                <Briefcase className="w-8 h-8 text-white" />
+              </div>
+              <h1 className="text-4xl font-bold text-slate-900 mb-2">Teacher Profile Setup</h1>
+              <p className="text-slate-600 text-lg">Showcase your expertise and connect with students</p>
+            </div>
 
             {/* Progress bar */}
-            <div className="w-full bg-white/20 rounded-full h-3 mb-4">
+            <div className="w-full bg-slate-200/60 rounded-full h-3 mb-6">
               <div
-                className="bg-white rounded-full h-3 transition-all duration-500 ease-out"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-full h-3 transition-all duration-500 ease-out shadow-sm"
                 style={{ width: `${progress}%` }}
               ></div>
             </div>
@@ -536,16 +549,18 @@ const TeacherProfileForm = () => {
             <div className="flex justify-between">
               {steps.map((step, index) => (
                 <div key={index} className="flex flex-col items-center flex-1">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 transform scale-90 ${index <= uiState.currentStep ? 'bg-white text-violet-600 shadow-md scale-100' : 'bg-white/20 text-white/60'
-                    }`}>
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold transition-all duration-300 ${
+                    index <= uiState.currentStep 
+                      ? 'bg-gradient-to-br from-blue-600 to-purple-600 text-white shadow-lg scale-105' 
+                      : 'bg-white/60 backdrop-blur-sm text-slate-400 border border-white/40'
+                  }`}>
                     {index < uiState.currentStep ? <Check className="w-5 h-5" /> : <step.icon className="w-5 h-5" />}
                   </div>
-                  <span className="mt-2 text-xs sm:text-sm text-center">{step.title}</span>
+                  <span className="mt-2 text-sm text-slate-700 text-center font-medium">{step.title}</span>
                 </div>
               ))}
             </div>
           </div>
-        </div>
 
         {/* Global Message/Toast */}
         {uiState.message && (
@@ -560,15 +575,79 @@ const TeacherProfileForm = () => {
           </div>
         )}
 
-        <div className="grid lg:grid-cols-3 gap-8">
+        {/* Main content area */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Tips section */}
+          <div className="lg:col-span-1">
+            <div className="bg-white/60 backdrop-blur-xl border border-white/20 rounded-2xl p-6 shadow-xl sticky top-8">
+              <div className="flex items-center mb-6">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center mr-3">
+                  <Lightbulb className="w-5 h-5 text-white" />
+                </div>
+                <h2 className="text-xl font-bold text-slate-900">Profile Tips</h2>
+              </div>
+              
+              <div className="space-y-4">
+                {[
+                  {
+                    number: "01",
+                    title: "Professional Photo",
+                    description: "Upload a clear, professional headshot that builds trust",
+                    gradient: "from-blue-500 to-cyan-500"
+                  },
+                  {
+                    number: "02", 
+                    title: "Compelling Bio",
+                    description: "Share your teaching philosophy and what makes you unique",
+                    gradient: "from-purple-500 to-pink-500"
+                  },
+                  {
+                    number: "03",
+                    title: "Expertise Areas", 
+                    description: "Highlight your specializations and teaching strengths",
+                    gradient: "from-emerald-500 to-teal-500"
+                  },
+                  {
+                    number: "04",
+                    title: "Teaching Experience",
+                    description: "Showcase your background and qualifications clearly",
+                    gradient: "from-orange-500 to-red-500"
+                  },
+                  {
+                    number: "05",
+                    title: "Competitive Pricing",
+                    description: "Set fair rates that reflect your expertise level",
+                    gradient: "from-violet-500 to-purple-500"
+                  }
+                ].map((tip, index) => (
+                  <div 
+                    key={index}
+                    className="group relative overflow-hidden rounded-xl border border-white/30 bg-white/40 backdrop-blur-sm p-4 transition-all duration-300 hover:bg-white/60 hover:scale-105 hover:shadow-lg"
+                  >
+                    <div className="flex items-start space-x-3">
+                      <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${tip.gradient} flex items-center justify-center text-white text-sm font-bold shadow-sm`}>
+                        {tip.number}
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-slate-900 mb-1 text-sm">{tip.title}</h3>
+                        <p className="text-slate-600 text-xs leading-relaxed">{tip.description}</p>
+                      </div>
+                    </div>
+                    <div className={`absolute inset-0 bg-gradient-to-br ${tip.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`}></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* Main Form */}
           <div className="lg:col-span-2">
-            <div className="bg-white shadow-2xl rounded-3xl p-8 transform transition-all duration-300 hover:shadow-3xl">
+            <div className="bg-white/60 backdrop-blur-xl border border-white/20 rounded-2xl p-8 shadow-xl">
               <div className="space-y-6">
                 {/* Personal Info (Read-only from login) */}
-                <div className="bg-violet-50 p-4 rounded-xl shadow-inner border border-violet-200">
-                  <h3 className="font-semibold text-violet-700 mb-3 flex items-center gap-2">
-                    <UserCircle2 className="w-5 h-5" /> Account Details
+                <div className="bg-blue-50/60 backdrop-blur-sm p-6 rounded-xl border border-blue-200/40 shadow-sm">
+                  <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                    <UserCircle2 className="w-5 h-5 text-blue-600" /> Account Details
                   </h3>
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
@@ -605,12 +684,12 @@ const TeacherProfileForm = () => {
                 {uiState.currentStep === 0 && (
                   <div className="space-y-6 animate-fade-in">
                     <h3 className="font-semibold text-gray-800 text-lg">Your Contact & Professional Info</h3>
-                    {renderInputField('Phone Number', 'phone', 'tel', <Phone className="w-4 h-4 text-violet-600" />, 'e.g., +91 98765 43210', false)}
-                    {renderInputField('Location', 'location', 'text', <MapPin className="w-4 h-4 text-violet-600" />, 'e.g., Kolkata, West Bengal', true)}
-                    {renderInputField('Highest Qualification', 'qualifications', 'text', <GraduationCap className="w-4 h-4 text-violet-600" />, 'e.g., M.Sc. Physics, B.Tech CSE', true)}
+                    {renderInputField('Phone Number', 'phone', 'tel', <Phone className="w-4 h-4 text-blue-600" />, 'e.g., +91 98765 43210', false)}
+                    {renderInputField('Location', 'location', 'text', <MapPin className="w-4 h-4 text-blue-600" />, 'e.g., Kolkata, West Bengal', true)}
+                    {renderInputField('Highest Qualification', 'qualifications', 'text', <GraduationCap className="w-4 h-4 text-blue-600" />, 'e.g., M.Sc. Physics, B.Tech CSE', true)}
                     <div className="grid md:grid-cols-2 gap-6">
-                      {renderInputField('Years of Experience', 'experienceYears', 'number', <Briefcase className="w-4 h-4 text-violet-600" />, 'e.g., 5', false)}
-                      {renderInputField('Current Occupation', 'currentOccupation', 'text', <Award className="w-4 h-4 text-violet-600" />, 'e.g., Full-time Teacher, Freelance Tutor', false)}
+                      {renderInputField('Years of Experience', 'experienceYears', 'number', <Briefcase className="w-4 h-4 text-blue-600" />, 'e.g., 5', false)}
+                      {renderInputField('Current Occupation', 'currentOccupation', 'text', <Award className="w-4 h-4 text-blue-600" />, 'e.g., Full-time Teacher, Freelance Tutor', false)}
                     </div>
                   </div>
                 )}
@@ -619,13 +698,13 @@ const TeacherProfileForm = () => {
                 {uiState.currentStep === 1 && (
                   <div className="space-y-6 animate-fade-in">
                     <h3 className="font-semibold text-gray-800 text-lg">Your Teaching Expertise</h3>
-                    {renderTagInputField('Subjects You Teach', 'subjectsTaught', 'subjectInput', <BookOpenCheck className="w-4 h-4 text-violet-600" />, 'Add a subject, e.g., Mathematics', true)}
-                    {renderTagInputField('Boards/Curriculums You Teach', 'boardsTaught', 'boardInput', <School className="w-4 h-4 text-violet-600" />, 'Add a board, e.g., CBSE, ICSE', true)}
-                    {renderTagInputField('Classes/Courses You Teach', 'classesTaught', 'classInput', <GraduationCap className="w-4 h-4 text-violet-600" />, 'Add a class/course, e.g., Class 10, JEE Mains', true)}
+                    {renderTagInputField('Subjects You Teach', 'subjectsTaught', 'subjectInput', <BookOpenCheck className="w-4 h-4 text-blue-600" />, 'Add a subject, e.g., Mathematics', true)}
+                    {renderTagInputField('Boards/Curriculums You Teach', 'boardsTaught', 'boardInput', <School className="w-4 h-4 text-blue-600" />, 'Add a board, e.g., CBSE, ICSE', true)}
+                    {renderTagInputField('Classes/Courses You Teach', 'classesTaught', 'classInput', <GraduationCap className="w-4 h-4 text-blue-600" />, 'Add a class/course, e.g., Class 10, JEE Mains', true)}
                     {renderSelectField(
                       'Preferred Teaching Mode',
                       'teachingMode',
-                      <UserCircle2 className="w-4 h-4 text-violet-600" />,
+                      <UserCircle2 className="w-4 h-4 text-blue-600" />,
                       [
                         { value: 'online-live', label: 'Online Live Classes' },
                         { value: 'offline', label: 'Offline Classes' },
@@ -634,7 +713,7 @@ const TeacherProfileForm = () => {
                       'Select teaching mode',
                       true
                     )}
-                    {renderInputField('Preferred Schedule/Availability', 'preferredSchedule', 'text', <Clock className="w-4 h-4 text-violet-600" />, 'e.g., Weekends, Evenings', false)}
+                    {renderInputField('Preferred Schedule/Availability', 'preferredSchedule', 'text', <Clock className="w-4 h-4 text-blue-600" />, 'e.g., Weekends, Evenings', false)}
                   </div>
                 )}
 
@@ -642,8 +721,8 @@ const TeacherProfileForm = () => {
                 {uiState.currentStep === 2 && (
                   <div className="space-y-6 animate-fade-in">
                     <h3 className="font-semibold text-gray-800 text-lg">Tell us more about your teaching</h3>
-                    {renderInputField('Your Professional Bio', 'bio', 'text', <Edit3 className="w-4 h-4 text-violet-600" />, 'Share your teaching philosophy, experience highlights, etc.', false, true)}
-                    {renderInputField('Your Teaching Approach', 'teachingApproach', 'text', <BookOpenCheck className="w-4 h-4 text-violet-600" />, 'How do you structure your classes? What makes your teaching unique?', false, true)}
+                    {renderInputField('Your Professional Bio', 'bio', 'text', <Edit3 className="w-4 h-4 text-blue-600" />, 'Share your teaching philosophy, experience highlights, etc.', false, true)}
+                    {renderInputField('Your Teaching Approach', 'teachingApproach', 'text', <BookOpenCheck className="w-4 h-4 text-blue-600" />, 'How do you structure your classes? What makes your teaching unique?', false, true)}
                     {renderTagInputField('Achievements & Success Stories', 'achievements', 'achievementInput', <Star className="w-4 h-4 text-violet-600" />, 'Add an achievement, e.g., 90% students scored A+', false)}
                     {renderInputField('Expected Hourly Rate (INR)', 'hourlyRate', 'number', <Info className="w-4 h-4 text-violet-600" />, 'e.g., 500', false)}
 
@@ -784,15 +863,6 @@ const TeacherProfileForm = () => {
             </div>
 
             {/* Tips Card */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 shadow-md">
-              <h3 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">💡 Tips for a Great Profile</h3>
-              <ul className="space-y-2 text-sm text-blue-700">
-                <li>**Highlight Your Expertise:** Clearly list all subjects, boards, and classes you teach.</li>
-                <li>**Showcase Experience:** Mention your years of experience and current occupation.</li>
-                <li>**Professional Photo:** A clear, professional photo builds trust with potential students.</li>
-                <li>**Detailed Bio:** Describe your teaching philosophy and what makes your approach unique.</li>
-                <li>**List Achievements:** Share any success stories or notable achievements to stand out.</li>
-              </ul>
             </div>
           </div>
         </div>

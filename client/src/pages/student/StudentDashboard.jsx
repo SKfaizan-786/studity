@@ -34,7 +34,9 @@ import {
   Activity,
   AwardIcon,
   CheckCircle2, // Added for AssignmentCard
-  AlertTriangle // Added for AssignmentCard
+  AlertTriangle, // Added for AssignmentCard
+  Menu,
+  X
 } from 'lucide-react';
 
 // --- Context for Current User ---
@@ -88,32 +90,59 @@ const getSampleStudentData = (firstName = 'Student') => {
 
 // --- Sub-Components ---
 
-const SidebarButton = ({ icon: Icon, text, onClick, isActive, count }) => {
+const SidebarButton = ({ icon: Icon, text, onClick, isActive, count, isCollapsed }) => {
   return (
-    <button
-      onClick={onClick}
-      className={`group flex items-center w-full p-3 rounded-xl text-left font-medium transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg ${
-        isActive
-          ? 'bg-blue-600 text-white shadow-lg'
-          : 'text-slate-700 hover:bg-white/60 hover:text-blue-600 hover:backdrop-blur-sm'
-      }`}
-    >
-      <Icon className={`w-5 h-5 mr-3 ${isActive ? 'text-white' : 'text-slate-600 group-hover:text-blue-600'}`} />
-      <span>{text}</span>
-      {count && (
-        <span
-          className={`ml-auto px-2 py-0.5 text-xs font-bold rounded-full transition-all duration-300 ${
-            isActive ? 'bg-white text-blue-600' : 'bg-blue-500 text-white group-hover:bg-blue-600 group-hover:text-white'
-          }`}
-        >
-          {count}
+    <div className="relative">
+      <button
+        onClick={onClick}
+        className={`group flex items-center w-full p-3 rounded-xl text-left font-medium transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg ${
+          isActive
+            ? 'bg-blue-600 text-white shadow-lg'
+            : 'text-slate-700 hover:bg-white/60 hover:text-blue-600 hover:backdrop-blur-sm'
+        } ${isCollapsed ? 'justify-center relative' : ''}`}
+        title={isCollapsed ? text : ''}
+      >
+        <Icon className={`w-5 h-5 ${isCollapsed ? '' : 'mr-3'} ${isActive ? 'text-white' : 'text-slate-600 group-hover:text-blue-600'}`} />
+        {!isCollapsed && (
+          <>
+            <span>{text}</span>
+            {count && count > 0 && (
+              <span
+                className={`ml-auto px-2 py-0.5 text-xs font-bold rounded-full transition-all duration-300 ${
+                  isActive ? 'bg-white text-blue-600' : 'bg-blue-500 text-white group-hover:bg-blue-600 group-hover:text-white'
+                }`}
+              >
+                {count}
+              </span>
+            )}
+          </>
+        )}
+      </button>
+      
+      {/* Collapsed state count badge */}
+      {isCollapsed && count && count > 0 && (
+        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold min-w-[20px] h-5 flex items-center justify-center rounded-full border-2 border-white shadow-sm px-1">
+          {count > 99 ? '99+' : count}
         </span>
       )}
-    </button>
+      
+      {/* Tooltip for collapsed state */}
+      {isCollapsed && (
+        <div className="absolute left-full ml-2 top-1/2 transform -translate-y-1/2 bg-slate-800 text-white px-3 py-2 rounded-lg text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 shadow-lg">
+          {text}
+          {count && count > 0 && (
+            <span className="ml-2 bg-blue-500 text-white px-2 py-0.5 rounded-full text-xs">
+              {count}
+            </span>
+          )}
+          <div className="absolute right-full top-1/2 transform -translate-y-1/2 border-4 border-transparent border-r-slate-800"></div>
+        </div>
+      )}
+    </div>
   );
 };
 
-const MainHeader = ({ currentUser, unseenNotificationsCount }) => {
+const MainHeader = ({ currentUser, unseenNotificationsCount, onMobileMenuToggle }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -131,11 +160,20 @@ const MainHeader = ({ currentUser, unseenNotificationsCount }) => {
 
   return (
     <div className="flex justify-between items-center mb-8">
-      <div>
-        <h1 className="text-4xl font-bold text-slate-900 mb-2">
-          Good {getTimeOfDay()}, <span className="text-blue-600">{currentUser.firstName}!</span>
-        </h1>
-        <p className="text-slate-600 text-lg">Welcome back to your personalized dashboard.</p>
+      <div className="flex items-center">
+        {/* Mobile menu toggle */}
+        <button
+          onClick={onMobileMenuToggle}
+          className="lg:hidden mr-4 p-2 bg-white/70 backdrop-blur-sm rounded-xl hover:bg-white/80 transition-all duration-200 shadow-sm"
+        >
+          <Menu className="w-6 h-6 text-slate-700" />
+        </button>
+        <div>
+          <h1 className="text-4xl font-bold text-slate-900 mb-2">
+            Good {getTimeOfDay()}, <span className="text-blue-600">{currentUser.firstName}!</span>
+          </h1>
+          <p className="text-slate-600 text-lg">Welcome back to your personalized dashboard.</p>
+        </div>
       </div>
       <div className="flex items-center space-x-4 relative">
         <div className="relative">
@@ -153,7 +191,7 @@ const MainHeader = ({ currentUser, unseenNotificationsCount }) => {
         >
           <Bell className="w-5 h-5 text-slate-700" />
           {unseenNotificationsCount > 0 && (
-            <span className="absolute top-1 right-1 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white animate-bounce-once">
+            <span className="absolute top-1 right-1 bg-red-500 text-white text-xs font-bold w-4 h-4 flex items-center justify-center rounded-full border-2 border-white animate-bounce-once">
               {unseenNotificationsCount}
             </span>
           )}
@@ -376,6 +414,8 @@ const StudentDashboard = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [activeMenuItem, setActiveMenuItem] = useState('dashboard'); // State for active sidebar item
   const [dashboardData, setDashboardData] = useState(null); // All data for the dashboard
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // State for sidebar collapse
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // State for mobile menu
 
   // Effect to load current user and dashboard data
   useEffect(() => {
@@ -427,7 +467,9 @@ const StudentDashboard = () => {
   const cardClass = "relative p-6 bg-white/60 backdrop-blur-sm rounded-2xl shadow-sm border border-white/40";
   const sectionTitleClass = "text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3";
 
-  const sidebarClass = `w-72 bg-white/80 backdrop-blur-xl border-r border-white/20 p-6 flex flex-col relative overflow-hidden shadow-lg z-10`; 
+  const sidebarClass = `${sidebarCollapsed ? 'w-20' : 'w-72'} bg-white/80 backdrop-blur-xl border-r border-white/20 ${sidebarCollapsed ? 'p-3' : 'p-6'} flex flex-col relative overflow-hidden shadow-lg z-10 transition-all duration-300 ${
+    mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+  } fixed lg:relative h-full lg:h-auto`; 
   const mainContentClass = `flex-1 p-8 overflow-y-auto`;
 
   return (
@@ -442,16 +484,52 @@ const StudentDashboard = () => {
         
         {/* Content */}
         <div className="relative z-10 flex min-h-screen w-full">
+        
+        {/* Mobile overlay */}
+        {mobileMenuOpen && (
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
         {/* Sidebar */}
         <aside className={sidebarClass}>
           <div className="relative z-10 flex flex-col h-full">
-            <Link to="/" className="mb-8 text-center block group">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mb-4 mx-auto transform group-hover:scale-105 transition-all duration-300 cursor-pointer">
-                <GraduationCap className="w-8 h-8 text-white" />
-              </div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors duration-200">Yuvshiksha</h2>
-              <p className="text-slate-600 text-sm group-hover:text-slate-700 transition-colors duration-200">Student Portal</p>
-            </Link>
+            <div className={`${sidebarCollapsed ? 'mb-6' : 'mb-8'} relative`}>
+              <Link to="/" className={`block group ${sidebarCollapsed ? 'w-full text-center' : 'text-center'}`}>
+                <div className={`${sidebarCollapsed ? 'w-12 h-12' : 'w-16 h-16'} bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center ${sidebarCollapsed ? 'mb-0' : 'mb-4'} mx-auto transform group-hover:scale-105 transition-all duration-300 cursor-pointer`}>
+                  <GraduationCap className={`${sidebarCollapsed ? 'w-6 h-6' : 'w-8 h-8'} text-white`} />
+                </div>
+                {!sidebarCollapsed && (
+                  <>
+                    <h2 className="text-2xl font-bold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors duration-200">Yuvshiksha</h2>
+                    <p className="text-slate-600 text-sm group-hover:text-slate-700 transition-colors duration-200">Student Portal</p>
+                  </>
+                )}
+              </Link>
+              
+              {/* Desktop collapse toggle - Always visible in top right when collapsed */}
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className={`hidden lg:flex p-2 bg-white/60 hover:bg-white/80 rounded-xl transition-all duration-200 items-center justify-center ${
+                  sidebarCollapsed ? 'absolute -top-1 -right-1 z-50 w-8 h-8' : 'absolute top-0 right-0'
+                }`}
+                title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+              >
+                {sidebarCollapsed ? 
+                  <ChevronDown className="w-3 h-3 -rotate-90" /> : 
+                  <ChevronUp className="w-4 h-4 rotate-90" />
+                }
+              </button>
+              
+              {/* Mobile close button */}
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="lg:hidden absolute top-0 right-0 p-2 bg-white/60 hover:bg-white/80 rounded-xl transition-all duration-200"
+              >
+                <X className="w-5 h-5 text-slate-700" />
+              </button>
+            </div>
 
             <nav className="space-y-2 mb-8 flex-1">
               <SidebarButton
@@ -459,6 +537,7 @@ const StudentDashboard = () => {
                 text="Dashboard"
                 onClick={() => setActiveMenuItem('dashboard')}
                 isActive={activeMenuItem === 'dashboard'}
+                isCollapsed={sidebarCollapsed}
               />
               <SidebarButton
                 icon={BookCheck}
@@ -466,6 +545,7 @@ const StudentDashboard = () => {
                 onClick={() => setActiveMenuItem('courses')}
                 isActive={activeMenuItem === 'courses'}
                 count={dashboardData.courses.length}
+                isCollapsed={sidebarCollapsed}
               />
               <SidebarButton
                 icon={ClipboardList}
@@ -473,6 +553,7 @@ const StudentDashboard = () => {
                 onClick={() => setActiveMenuItem('assignments')}
                 isActive={activeMenuItem === 'assignments'}
                 count={dashboardData.assignments.filter(a => a.status === 'Due').length}
+                isCollapsed={sidebarCollapsed}
               />
               <SidebarButton
                 icon={CalendarDays}
@@ -480,6 +561,7 @@ const StudentDashboard = () => {
                 onClick={() => setActiveMenuItem('schedule')}
                 isActive={activeMenuItem === 'schedule'}
                 count={dashboardData.schedule.length}
+                isCollapsed={sidebarCollapsed}
               />
               <SidebarButton
                 icon={Bell}
@@ -487,6 +569,7 @@ const StudentDashboard = () => {
                 onClick={() => setActiveMenuItem('notifications')}
                 isActive={activeMenuItem === 'notifications'}
                 count={unseenNotificationsCount}
+                isCollapsed={sidebarCollapsed}
               />
               <SidebarButton
                 icon={MessageSquare}
@@ -494,6 +577,7 @@ const StudentDashboard = () => {
                 onClick={() => setActiveMenuItem('messages')}
                 isActive={activeMenuItem === 'messages'}
                 count={3}
+                isCollapsed={sidebarCollapsed}
               />
               <SidebarButton
                 icon={AwardIcon}
@@ -501,32 +585,35 @@ const StudentDashboard = () => {
                 onClick={() => setActiveMenuItem('achievements')}
                 isActive={activeMenuItem === 'achievements'}
                 count={5}
+                isCollapsed={sidebarCollapsed}
               />
               
               {/* Navigation Links */}
-              <div className="border-t border-white/20 pt-4 mt-4">
-                <Link
-                  to="/student/find-teachers"
-                  className="flex items-center space-x-3 w-full p-3 text-left text-slate-700 hover:bg-white/40 rounded-xl transition-all duration-200 group"
-                >
-                  <Search className="w-5 h-5 group-hover:text-blue-600 transition-colors duration-200" />
-                  <span className="group-hover:text-blue-600 transition-colors duration-200">Find Teachers</span>
-                </Link>
-                <Link
-                  to="/pricing"
-                  className="flex items-center space-x-3 w-full p-3 text-left text-slate-700 hover:bg-white/40 rounded-xl transition-all duration-200 group"
-                >
-                  <BadgeCent className="w-5 h-5 group-hover:text-blue-600 transition-colors duration-200" />
-                  <span className="group-hover:text-blue-600 transition-colors duration-200">Pricing</span>
-                </Link>
-                <Link
-                  to="/help"
-                  className="flex items-center space-x-3 w-full p-3 text-left text-slate-700 hover:bg-white/40 rounded-xl transition-all duration-200 group"
-                >
-                  <HelpCircle className="w-5 h-5 group-hover:text-blue-600 transition-colors duration-200" />
-                  <span className="group-hover:text-blue-600 transition-colors duration-200">Help</span>
-                </Link>
-              </div>
+              {!sidebarCollapsed && (
+                <div className="border-t border-white/20 pt-4 mt-4">
+                  <Link
+                    to="/student/find-teachers"
+                    className="flex items-center space-x-3 w-full p-3 text-left text-slate-700 hover:bg-white/40 rounded-xl transition-all duration-200 group"
+                  >
+                    <Search className="w-5 h-5 group-hover:text-blue-600 transition-colors duration-200" />
+                    <span className="group-hover:text-blue-600 transition-colors duration-200">Find Teachers</span>
+                  </Link>
+                  <Link
+                    to="/pricing"
+                    className="flex items-center space-x-3 w-full p-3 text-left text-slate-700 hover:bg-white/40 rounded-xl transition-all duration-200 group"
+                  >
+                    <BadgeCent className="w-5 h-5 group-hover:text-blue-600 transition-colors duration-200" />
+                    <span className="group-hover:text-blue-600 transition-colors duration-200">Pricing</span>
+                  </Link>
+                  <Link
+                    to="/help"
+                    className="flex items-center space-x-3 w-full p-3 text-left text-slate-700 hover:bg-white/40 rounded-xl transition-all duration-200 group"
+                  >
+                    <HelpCircle className="w-5 h-5 group-hover:text-blue-600 transition-colors duration-200" />
+                    <span className="group-hover:text-blue-600 transition-colors duration-200">Help</span>
+                  </Link>
+                </div>
+              )}
             </nav>
 
             <div className="mt-auto">
@@ -536,23 +623,30 @@ const StudentDashboard = () => {
                   setToLocalStorage('currentUser', null); // Clear current user
                   navigate('/login');
                 }}
-                className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white py-3 rounded-xl font-semibold hover:from-red-700 hover:to-red-800 transition-all duration-300 shadow-lg flex items-center justify-center space-x-2 transform hover:scale-[1.02] hover:-translate-y-1"
+                className={`w-full bg-gradient-to-r from-red-600 to-red-700 text-white py-3 rounded-xl font-semibold hover:from-red-700 hover:to-red-800 transition-all duration-300 shadow-lg flex items-center justify-center space-x-2 transform hover:scale-[1.02] hover:-translate-y-1 ${
+                  sidebarCollapsed ? 'px-3' : ''
+                }`}
+                title={sidebarCollapsed ? 'Logout' : ''}
               >
                 <LogOut className="w-5 h-5" />
-                <span>Logout</span>
+                {!sidebarCollapsed && <span>Logout</span>}
               </button>
             </div>
           </div>
         </aside>
 
         {/* Main Content */}
-        <main className={mainContentClass}>
-          <MainHeader currentUser={currentUser} unseenNotificationsCount={unseenNotificationsCount} />
+        <main className={`flex-1 p-8 overflow-y-auto transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-0'}`}>
+          <MainHeader 
+            currentUser={currentUser} 
+            unseenNotificationsCount={unseenNotificationsCount} 
+            onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
+          />
 
           {activeMenuItem === 'dashboard' && (
             <section className="space-y-10">
               {/* Stat Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                 <StatCard
                   title="Total Courses"
                   value={dashboardData.stats.totalCourses}
