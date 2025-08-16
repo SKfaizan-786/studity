@@ -1,36 +1,26 @@
-import express from 'express';
-import {
-  createBooking,
-  getUserBookings,
-  getBookingById,
-  updateBookingStatus,
-  cancelBooking,
-  addBookingFeedback
-} from '../controllers/booking-controller';
+import { Router } from 'express';
+import { bookingController } from '../controllers/booking-controller';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { requireRole } from '../middleware/roleCheck';
 
-const router = express.Router();
+const router = Router();
 
 // All booking routes require authentication
 router.use(authMiddleware);
 
-// Create booking (students only)
-router.post('/', requireRole('student'), createBooking);
+// Teacher routes
+router.get('/teacher', requireRole('teacher'), bookingController.getTeacherBookings);
 
-// Get user's bookings
-router.get('/', getUserBookings);
+// Student routes  
+router.get('/student', requireRole('student'), bookingController.getStudentBookings);
+router.post('/', requireRole('student'), bookingController.createBooking);
 
-// Get specific booking
-router.get('/:bookingId', getBookingById);
+// Shared routes (both teacher and student can access)
+router.get('/:bookingId', bookingController.getBookingDetails);
+router.patch('/:bookingId/status', bookingController.updateBookingStatus);
+router.patch('/:bookingId/reschedule', bookingController.rescheduleBooking);
 
-// Update booking status
-router.patch('/:bookingId/status', updateBookingStatus);
-
-// Cancel booking
-router.patch('/:bookingId/cancel', cancelBooking);
-
-// Add feedback to booking
-router.patch('/:bookingId/feedback', addBookingFeedback);
+// Utility routes
+router.get('/teacher/:teacherId/availability', bookingController.getTeacherAvailability);
 
 export default router;

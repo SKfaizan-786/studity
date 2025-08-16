@@ -1,119 +1,27 @@
 import { useState, useEffect, useMemo } from "react";
-import { Search, Filter, Star, Clock, BookOpen, Award, ChevronDown, X, Check, Heart, MapPin, Calendar, DollarSign, Users, Zap, SlidersHorizontal, GraduationCap, Target, SearchX } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Search, Filter, Star, Clock, BookOpen, Award, ChevronDown, X, Check, Heart, MapPin, Calendar, DollarSign, Users, Zap, SlidersHorizontal, Loader2 } from "lucide-react";
+import API_CONFIG from '../../config/api';
 
-const mockTeachers = [
-  {
-    id: 1,
-    name: "Anjali Sharma",
-    subject: "Mathematics",
-    board: "CBSE",
-    experience: 5,
-    fee: 400,
-    rating: 4.8,
-    totalStudents: 45,
-    avatar: "AS",
-    specializations: ["Algebra", "Calculus", "Geometry"],
-    location: "Mumbai",
-    availability: ["Mon", "Wed", "Fri"],
-    bio: "Passionate mathematics teacher with innovative teaching methods",
-    languages: ["English", "Hindi"],
-    qualifications: ["M.Sc Mathematics", "B.Ed"],
-    verified: true,
-  },
-  {
-    id: 2,
-    name: "Ravi Mehta",
-    subject: "Physics",
-    board: "ICSE",
-    experience: 3,
-    fee: 350,
-    rating: 4.6,
-    totalStudents: 32,
-    avatar: "RM",
-    specializations: ["Mechanics", "Optics", "Modern Physics"],
-    location: "Delhi",
-    availability: ["Tue", "Thu", "Sat"],
-    bio: "Making physics fun and accessible for all students",
-    languages: ["English", "Hindi", "Punjabi"],
-    qualifications: ["M.Sc Physics", "B.Tech"],
-    verified: true,
-  },
-  {
-    id: 3,
-    name: "Priya Patel",
-    subject: "Chemistry",
-    board: "CBSE",
-    experience: 7,
-    fee: 450,
-    rating: 4.9,
-    totalStudents: 67,
-    avatar: "PP",
-    specializations: ["Organic Chemistry", "Physical Chemistry", "Analytical Chemistry"],
-    location: "Ahmedabad",
-    availability: ["Mon", "Tue", "Thu"],
-    bio: "Expert in making complex chemistry concepts simple and memorable",
-    languages: ["English", "Hindi", "Gujarati"],
-    qualifications: ["Ph.D Chemistry", "M.Sc Chemistry"],
-    verified: true,
-  },
-  {
-    id: 4,
-    name: "Vikram Singh",
-    subject: "Biology",
-    board: "ICSE",
-    experience: 4,
-    fee: 380,
-    rating: 4.7,
-    totalStudents: 28,
-    avatar: "VS",
-    specializations: ["Botany", "Zoology", "Human Physiology"],
-    location: "Bangalore",
-    availability: ["Wed", "Fri", "Sun"],
-    bio: "Bringing life sciences to life with practical examples",
-    languages: ["English", "Hindi", "Kannada"],
-    qualifications: ["M.Sc Biology", "B.Sc"],
-    verified: true,
-  },
-  {
-    id: 5,
-    name: "Meera Reddy",
-    subject: "English",
-    board: "CBSE",
-    experience: 6,
-    fee: 320,
-    rating: 4.8,
-    totalStudents: 52,
-    avatar: "MR",
-    specializations: ["Literature", "Grammar", "Creative Writing"],
-    location: "Hyderabad",
-    availability: ["Mon", "Wed", "Sat"],
-    bio: "Nurturing language skills and literary appreciation",
-    languages: ["English", "Hindi", "Telugu"],
-    qualifications: ["M.A English", "B.Ed"],
-    verified: false,
-  },
-  {
-    id: 6,
-    name: "Amit Kumar",
-    subject: "Computer Science",
-    board: "CBSE",
-    experience: 8,
-    fee: 500,
-    rating: 4.9,
-    totalStudents: 89,
-    avatar: "AK",
-    specializations: ["Programming", "Data Structures", "Web Development"],
-    location: "Pune",
-    availability: ["Tue", "Thu", "Fri"],
-    bio: "Coding mentor with industry experience and teaching passion",
-    languages: ["English", "Hindi", "Marathi"],
-    qualifications: ["M.Tech CSE", "B.Tech CSE"],
-    verified: true,
-  },
-];
+// Add this debug function before the main component
+const debugTeacherData = (teachers) => {
+  console.log('🔍 DEBUGGING TEACHER DATA:');
+  console.log('Total teachers received:', teachers.length);
+  
+  teachers.forEach((teacher, index) => {
+    console.log(`Teacher ${index + 1}:`, {
+      name: teacher.name,
+      isListed: teacher.teacherProfile?.isListed,
+      subjects: teacher.teacherProfile?.subjectsTaught || teacher.teacherProfile?.subjects,
+      profile: teacher.teacherProfile
+    });
+  });
+};
 
 export default function EnhancedTeacherPlatform() {
-  const [teachers, setTeachers] = useState(mockTeachers);
+  const [teachers, setTeachers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -133,6 +41,323 @@ export default function EnhancedTeacherPlatform() {
     message: "",
   });
   const [notification, setNotification] = useState("");
+
+  const navigate = useNavigate();
+
+  // Fetch real teachers from backend
+  const fetchTeachers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const token = localStorage.getItem('token');
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      
+      console.log('🔍 Frontend: Fetching teachers...');
+      console.log('🔑 Token:', token ? `Present (${token.substring(0, 20)}...)` : 'Missing');
+      console.log('👤 Current User:', currentUser);
+      console.log('🎭 User Role:', currentUser.role);
+      
+      if (!token) {
+        console.log('❌ No token found');
+        
+        // If we have a valid user but no token, try to work with localStorage only
+        if (currentUser && currentUser.role) {
+          console.log('👤 Valid user found, using localStorage fallback only');
+          
+          // Skip API calls and go directly to localStorage fallback
+          const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+          console.log('📦 All users in localStorage:', allUsers);
+          
+          // If no users in localStorage but we have a current teacher user, add them
+          let usersToCheck = allUsers;
+          if (allUsers.length === 0 && currentUser.role === 'teacher' && currentUser.teacherProfile) {
+            console.log('📝 Adding current teacher to users list');
+            usersToCheck = [currentUser];
+            localStorage.setItem('users', JSON.stringify([currentUser]));
+          }
+          
+          const listedTeachers = usersToCheck.filter(user => {
+            const isTeacher = user.role === 'teacher';
+            const hasProfile = user.teacherProfile;
+            const isListed = user.teacherProfile?.isListed === true;
+            
+            console.log(`👤 Checking user ${user.email || user.firstName}: teacher=${isTeacher}, hasProfile=${hasProfile}, isListed=${isListed}`);
+            
+            return isTeacher && hasProfile && isListed;
+          });
+
+          console.log('🎯 Listed teachers from localStorage:', listedTeachers);
+
+          const formattedTeachers = listedTeachers.map(teacher => ({
+            id: teacher._id || teacher.id,
+            name: `${teacher.firstName || ''} ${teacher.lastName || ''}`.trim() || 'Teacher',
+            subject: teacher.teacherProfile?.subjects?.[0] || teacher.teacherProfile?.subjectsTaught?.[0] || 'General',
+            board: teacher.teacherProfile?.boards?.[0] || teacher.teacherProfile?.boardsTaught?.[0] || 'CBSE',
+            experience: teacher.teacherProfile?.experienceYears || 1,
+            fee: teacher.teacherProfile?.hourlyRate || 500,
+            rating: teacher.rating || 4.5,
+            totalStudents: teacher.totalStudents || 0,
+            avatar: getTeacherAvatar(teacher),
+            specializations: teacher.teacherProfile?.subjects || teacher.teacherProfile?.subjectsTaught || ['General'],
+            location: teacher.teacherProfile?.location || 'India',
+            availability: getAvailabilityDays(teacher.teacherProfile?.availability) || ["Mon", "Wed", "Fri"],
+            bio: teacher.teacherProfile?.bio || 'Experienced educator dedicated to student success.',
+            languages: ["English", "Hindi"],
+            qualifications: [teacher.teacherProfile?.qualifications || 'Graduate'],
+            verified: true,
+            email: teacher.email,
+            phone: teacher.teacherProfile?.phone,
+            teachingMode: teacher.teacherProfile?.teachingMode || 'hybrid',
+            profilePicture: teacher.teacherProfile?.photoUrl
+          }));
+
+          console.log('🎯 Final formatted teachers:', formattedTeachers);
+          setTeachers(formattedTeachers);
+          setLoading(false);
+          return;
+        } else {
+          console.log('❌ No valid user found');
+          setError('Please login to view teachers');
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Check if user is logged in
+      if (!currentUser || !currentUser.role) {
+        console.log('❌ No current user found, redirecting to login');
+        setError('Please login to view teachers');
+        setTimeout(() => {
+          navigate('/login');
+        }, 2000);
+        return;
+      }
+
+      // Use the API config instead of hardcoded URL
+      const API_BASE_URL = API_CONFIG.BASE_URL;
+      console.log('🌐 API Base URL:', API_BASE_URL);
+
+      // Try to fetch from API first
+      try {
+        // First, let's try the debug endpoint
+        console.log('🐛 Trying debug endpoint...');
+        const debugResponse = await fetch(`${API_BASE_URL}${API_CONFIG.ENDPOINTS.TEACHERS_DEBUG}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log('🐛 Debug response status:', debugResponse.status);
+        
+        if (debugResponse.ok) {
+          const debugData = await debugResponse.json();
+          console.log('🐛 Debug data:', debugData);
+        } else {
+          console.log('🐛 Debug endpoint failed:', await debugResponse.text());
+        }
+
+        // Now try the regular list endpoint
+        console.log('📋 Trying teachers list endpoint...');
+        const response = await fetch(`${API_BASE_URL}${API_CONFIG.ENDPOINTS.TEACHERS_LIST}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log('📡 API Response status:', response.status);
+
+        if (response.ok) {
+          const teachersData = await response.json();
+          console.log('📊 API returned teachers:', teachersData);
+          debugTeacherData(teachersData); // Add this line
+          
+          // Format teachers data for the UI
+          const formattedTeachers = teachersData.map(teacher => {
+            console.log('🔄 Formatting teacher:', teacher);
+            
+            // Handle both possible data structures for subjects
+            const subjects = teacher.teacherProfile?.subjectsTaught || 
+                            teacher.teacherProfile?.subjects || 
+                            [];
+            const boards = teacher.teacherProfile?.boardsTaught || 
+                          teacher.teacherProfile?.boards || 
+                          [];
+            const classes = teacher.teacherProfile?.classesTaught || 
+                           teacher.teacherProfile?.classes || 
+                           [];
+
+            return {
+              id: teacher._id || teacher.id,
+              name: `${teacher.firstName || ''} ${teacher.lastName || ''}`.trim() || 'Teacher',
+              subject: Array.isArray(subjects) ? subjects[0]?.text || subjects[0] : subjects,
+              board: Array.isArray(boards) ? boards[0]?.text || boards[0] : boards,
+              experience: teacher.teacherProfile?.experienceYears || 1,
+              fee: teacher.teacherProfile?.hourlyRate || 500,
+              rating: teacher.rating || 4.5,
+              totalStudents: teacher.totalStudents || 0,
+              avatar: getTeacherAvatar(teacher),
+              specializations: Array.isArray(subjects) ? subjects.map(s => s.text || s) : [subjects].filter(Boolean),
+              location: teacher.teacherProfile?.location || 'India',
+              availability: getAvailabilityDays(teacher.teacherProfile?.availability) || ["Mon", "Wed", "Fri"],
+              bio: teacher.teacherProfile?.bio || 'Experienced educator dedicated to student success.',
+              languages: ["English", "Hindi"],
+              qualifications: [teacher.teacherProfile?.qualifications || 'Graduate'],
+              verified: true,
+              email: teacher.email,
+              phone: teacher.teacherProfile?.phone,
+              teachingMode: teacher.teacherProfile?.teachingMode || 'hybrid',
+              profilePicture: teacher.teacherProfile?.photoUrl
+            };
+          });
+
+          console.log('✅ Formatted teachers:', formattedTeachers);
+          setTeachers(formattedTeachers);
+          return;
+        } else {
+          const errorText = await response.text();
+          console.error('❌ API Error:', response.status, errorText);
+          
+          if (response.status === 401) {
+            console.log('🔑 Token is invalid, removing and redirecting');
+            // Token is invalid, redirect to login
+            localStorage.removeItem('token');
+            localStorage.removeItem('currentUser');
+            setError('Your session has expired. Please login again.');
+            setTimeout(() => {
+              navigate('/login');
+            }, 2000);
+            return;
+          }
+          
+          throw new Error('API request failed');
+        }
+      } catch (apiError) {
+        console.log('⚠️ API not available, trying localStorage fallback...');
+        console.error('API Error details:', apiError);
+        
+        // ALWAYS try localStorage fallback for now since API might not be working
+        console.log('📦 Falling back to localStorage...');
+        
+        // Get all users from localStorage
+        const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+        
+        console.log('📦 All users in localStorage:', allUsers);
+        console.log('👤 Current user details:', currentUser);
+        
+        // If no users in localStorage but we have a current teacher user, add them
+        let usersToCheck = allUsers;
+        if (allUsers.length === 0 && currentUser.role === 'teacher' && currentUser.teacherProfile) {
+          console.log('📝 Adding current teacher to users list');
+          usersToCheck = [currentUser];
+          // Also save to localStorage for future use
+          localStorage.setItem('users', JSON.stringify([currentUser]));
+        }
+        
+        const listedTeachers = usersToCheck.filter(user => {
+          const isTeacher = user.role === 'teacher';
+          const hasProfile = user.teacherProfile;
+          const isListed = user.teacherProfile?.isListed === true;
+          
+          console.log(`👤 Checking user ${user.email || user.firstName}: teacher=${isTeacher}, hasProfile=${hasProfile}, isListed=${isListed}`);
+          
+          return isTeacher && hasProfile && isListed;
+        });
+
+        console.log('🎯 Listed teachers from localStorage:', listedTeachers);
+
+        if (listedTeachers.length === 0) {
+          console.log('📝 No listed teachers found. Checking if current user is a listed teacher...');
+          
+          // If current user is a teacher but not in the list, check their status
+          if (currentUser.role === 'teacher' && currentUser.teacherProfile) {
+            console.log('👨‍🏫 Current user is teacher with profile');
+            console.log('📋 Teacher profile:', currentUser.teacherProfile);
+            console.log('✅ isListed status:', currentUser.teacherProfile.isListed);
+            
+            if (currentUser.teacherProfile.isListed) {
+              console.log('✅ Current teacher is listed, adding to display');
+              listedTeachers.push(currentUser);
+            }
+          }
+        }
+
+        const formattedTeachers = listedTeachers.map(teacher => {
+          // Handle both possible data structures
+          const subjects = teacher.teacherProfile?.subjectsTaught || 
+                          teacher.teacherProfile?.subjects || 
+                          [];
+          const boards = teacher.teacherProfile?.boardsTaught || 
+                        teacher.teacherProfile?.boards || 
+                        [];
+
+          return {
+            id: teacher._id || teacher.id,
+            name: `${teacher.firstName || ''} ${teacher.lastName || ''}`.trim() || 'Teacher',
+            subject: Array.isArray(subjects) ? (subjects[0]?.text || subjects[0]) : subjects,
+            board: Array.isArray(boards) ? (boards[0]?.text || boards[0]) : boards,
+            experience: teacher.teacherProfile?.experienceYears || 1,
+            fee: teacher.teacherProfile?.hourlyRate || 500,
+            rating: teacher.rating || 4.5,
+            totalStudents: teacher.totalStudents || 0,
+            avatar: getTeacherAvatar(teacher),
+            specializations: Array.isArray(subjects) ? subjects.map(s => s.text || s).filter(Boolean) : [subjects].filter(Boolean),
+            location: teacher.teacherProfile?.location || 'India',
+            availability: getAvailabilityDays(teacher.teacherProfile?.availability) || ["Mon", "Wed", "Fri"],
+            bio: teacher.teacherProfile?.bio || 'Experienced educator dedicated to student success.',
+            languages: ["English", "Hindi"],
+            qualifications: [teacher.teacherProfile?.qualifications || 'Graduate'],
+            verified: true,
+            email: teacher.email,
+            phone: teacher.teacherProfile?.phone,
+            teachingMode: teacher.teacherProfile?.teachingMode || 'hybrid',
+            profilePicture: teacher.teacherProfile?.photoUrl
+          };
+        });
+
+        console.log('🎯 Final formatted teachers:', formattedTeachers);
+        setTeachers(formattedTeachers);
+    }
+  } catch (error) {
+    console.error('❌ Error fetching teachers:', error);
+    setError('Failed to load teachers. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+  };
+
+  // Helper function to get teacher avatar
+  const getTeacherAvatar = (teacher) => {
+    if (teacher.teacherProfile?.photoUrl) {
+      return teacher.teacherProfile.photoUrl;
+    }
+    const firstName = teacher.firstName || teacher.name || 'T';
+    return firstName.charAt(0).toUpperCase();
+  };
+
+  // Helper function to get availability days
+  const getAvailabilityDays = (availability) => {
+    if (!availability || !Array.isArray(availability)) return null;
+    return availability.map(slot => slot.day).slice(0, 3);
+  };
+
+  // Load teachers on component mount
+  useEffect(() => {
+    fetchTeachers();
+  }, []);
+
+  // Load favorites from localStorage
+  useEffect(() => {
+    const savedFavorites = JSON.parse(localStorage.getItem('teacherFavorites') || '[]');
+    setFavorites(savedFavorites);
+  }, []);
+
+  // Save favorites to localStorage
+  useEffect(() => {
+    localStorage.setItem('teacherFavorites', JSON.stringify(favorites));
+  }, [favorites]);
 
   // Animated notification system
   useEffect(() => {
@@ -180,24 +405,44 @@ export default function EnhancedTeacherPlatform() {
     setShowBookingModal(true);
   };
 
-  const submitBooking = () => {
-    const newBooking = {
-      id: Date.now(),
-      teacherId: selectedTeacher.id,
-      teacherName: selectedTeacher.name,
-      subject: selectedTeacher.subject,
-      date: bookingForm.date,
-      time: bookingForm.time,
-      duration: bookingForm.duration,
-      message: bookingForm.message,
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    };
+  // Also update the submitBooking function to use correct API URL
+  const submitBooking = async () => {
+    try {
+      const bookingData = {
+        teacherId: selectedTeacher.id,
+        subject: selectedTeacher.subject,
+        date: bookingForm.date,
+        time: bookingForm.time,
+        duration: parseFloat(bookingForm.duration),
+        notes: bookingForm.message,
+        amount: selectedTeacher.fee * parseFloat(bookingForm.duration)
+      };
 
-    setBookings([...bookings, newBooking]);
-    setShowBookingModal(false);
-    setBookingForm({ date: "", time: "", duration: "1", message: "" });
-    setNotification(`Booking request sent to ${selectedTeacher.name}! 🎉`);
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.BOOKINGS}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(bookingData)
+      });
+
+      if (response.ok) {
+        const newBooking = await response.json();
+        setBookings([...bookings, newBooking]);
+        setShowBookingModal(false);
+        setBookingForm({ date: "", time: "", duration: "1", message: "" });
+        setNotification(`Booking request sent to ${selectedTeacher.name}! 🎉`);
+      } else {
+        const errorData = await response.json();
+        setNotification(`Error: ${errorData.message || 'Failed to create booking'}`);
+      }
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      setNotification('Failed to create booking. Please try again.');
+    }
   };
 
   const toggleFavorite = (teacherId) => {
@@ -216,14 +461,112 @@ export default function EnhancedTeacherPlatform() {
   const uniqueBoards = [...new Set(teachers.map(t => t.board))];
   const uniqueSubjects = [...new Set(teachers.map(t => t.subject))];
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 relative overflow-hidden">
-      {/* Background decorative elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-10 left-10 w-72 h-72 bg-blue-400/20 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float"></div>
-        <div className="absolute top-40 right-10 w-72 h-72 bg-purple-400/20 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float-delayed"></div>
-        <div className="absolute -bottom-8 left-20 w-72 h-72 bg-indigo-400/20 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float-slow"></div>
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-700">Loading Teachers...</h2>
+          <p className="text-gray-500 mt-2">Please wait while we fetch available teachers</p>
+        </div>
       </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-8">
+          <div className="text-6xl mb-4">⚠️</div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Oops! Something went wrong</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <div className="space-y-3">
+            <button
+              onClick={fetchTeachers}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200"
+            >
+              Try Again
+            </button>
+            <button
+              onClick={checkLoginStatus}
+              className="w-full bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200"
+            >
+              Check Login Status
+            </button>
+            <button
+              onClick={() => navigate('/login')}
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200"
+            >
+              Go to Login
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const checkLoginStatus = () => {
+    const token = localStorage.getItem('token');
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    
+    console.log('=== LOGIN STATUS CHECK ===');
+    console.log('Token:', token ? 'Present' : 'Missing');
+    console.log('Current User:', currentUser);
+    console.log('User Role:', currentUser.role);
+    console.log('Teacher Profile:', currentUser.teacherProfile);
+    console.log('Is Listed:', currentUser.teacherProfile?.isListed);
+    console.log('========================');
+    
+    if (!token || !currentUser.role) {
+      alert('❌ You are not logged in. Please login first.');
+      navigate('/login');
+    } else {
+      alert(`✅ Logged in as ${currentUser.role}: ${currentUser.firstName} ${currentUser.lastName}`);
+    }
+  };
+
+  const generateTestToken = async () => {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    
+    if (!currentUser.email) {
+      alert('No user data found');
+      return;
+    }
+    
+    try {
+      // Try to login with stored user data to get a fresh token
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: currentUser.email,
+          password: 'yourpassword' // You'll need to enter the correct password
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('currentUser', JSON.stringify(data.user));
+        alert('✅ Token generated! Try fetching teachers again.');
+        fetchTeachers();
+      } else {
+        alert('❌ Failed to generate token. Please login manually.');
+        navigate('/login');
+      }
+    } catch (error) {
+      console.error('Error generating token:', error);
+      alert('❌ Error generating token. Please login manually.');
+      navigate('/login');
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       {/* Notification Toast */}
       {notification && (
         <div className="fixed top-4 right-4 z-50 bg-white/90 backdrop-blur-xl border border-white/20 text-slate-800 px-6 py-3 rounded-xl shadow-xl transform transition-all duration-300 animate-pulse">
@@ -237,17 +580,11 @@ export default function EnhancedTeacherPlatform() {
       {/* Hero Header */}
       <div className="relative z-10 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white py-16 px-6">
         <div className="max-w-7xl mx-auto text-center">
-          <div className="mb-6">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl mb-4">
-              <Search className="w-8 h-8 text-white" />
-            </div>
-          </div>
-          <h1 className="text-5xl font-bold mb-4">
-            <Target className="inline-block w-12 h-12 mr-4 mb-2" />
-            Find Your Perfect Teacher
+          <h1 className="text-5xl font-bold mb-4 animate-pulse">
+            🌟 Find Your Perfect Teacher 🌟
           </h1>
-          <p className="text-xl opacity-90 mb-8 max-w-2xl mx-auto">
-            Connect with exceptional educators and unlock your learning potential with personalized guidance
+          <p className="text-xl opacity-90 mb-8">
+            Discover qualified educators and transform your learning journey
           </p>
           
           {/* Advanced Search Bar */}
@@ -336,16 +673,16 @@ export default function EnhancedTeacherPlatform() {
                   <input
                     type="number"
                     value={priceRange[0]}
-                    onChange={(e) => setPriceRange([parseInt(e.target.value), priceRange[1]])}
-                    className="w-20 p-2 bg-white/70 backdrop-blur-sm border border-white/30 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    onChange={(e) => setPriceRange([parseInt(e.target.value) || 0, priceRange[1]])}
+                    className="w-20 p-2 border border-gray-200 rounded-lg"
                     placeholder="Min"
                   />
                   <span className="text-slate-600">-</span>
                   <input
                     type="number"
                     value={priceRange[1]}
-                    onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
-                    className="w-20 p-2 bg-white/70 backdrop-blur-sm border border-white/30 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 1000])}
+                    className="w-20 p-2 border border-gray-200 rounded-lg"
                     placeholder="Max"
                   />
                 </div>
@@ -356,17 +693,13 @@ export default function EnhancedTeacherPlatform() {
 
         {/* Results Header */}
         <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center space-x-6">
-            <div className="bg-white/60 backdrop-blur-xl border border-white/20 rounded-2xl px-6 py-3 shadow-lg">
-              <h2 className="text-2xl font-bold text-slate-800">
-                {filteredAndSortedTeachers.length} Teachers Found
-              </h2>
-            </div>
-            {bookings.length > 0 && (
-              <div className="bg-blue-50/80 backdrop-blur-sm border border-blue-200/40 rounded-xl px-4 py-2">
-                <div className="text-sm font-medium text-blue-700">
-                  {bookings.length} Active Bookings
-                </div>
+          <div className="flex items-center space-x-4">
+            <h2 className="text-2xl font-bold text-gray-800">
+              {filteredAndSortedTeachers.length} Teachers Found
+            </h2>
+            {teachers.length === 0 && !loading && (
+              <div className="text-sm text-amber-600 bg-amber-50 px-3 py-1 rounded-full">
+                No teachers are currently listed
               </div>
             )}
           </div>
@@ -419,8 +752,18 @@ export default function EnhancedTeacherPlatform() {
                   <div className="absolute inset-0 bg-black/10 group-hover:bg-black/5 transition-all duration-300"></div>
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-3">
-                      <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/30">
-                        <span className="text-2xl font-bold text-white">{teacher.avatar}</span>
+                      <div className="text-4xl">
+                        {teacher.profilePicture ? (
+                          <img 
+                            src={teacher.profilePicture} 
+                            alt={teacher.name}
+                            className="w-12 h-12 rounded-full object-cover border-2 border-white/20"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-xl font-bold">
+                            {teacher.avatar}
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center space-x-2">
                         {teacher.verified && (
@@ -542,15 +885,23 @@ export default function EnhancedTeacherPlatform() {
           ))}
         </div>
 
-        {filteredAndSortedTeachers.length === 0 && (
+        {filteredAndSortedTeachers.length === 0 && !loading && (
           <div className="text-center py-16">
-            <div className="mb-6">
-              <div className="inline-flex items-center justify-center w-24 h-24 bg-white/60 backdrop-blur-xl border border-white/20 rounded-2xl mb-4">
-                <SearchX className="w-12 h-12 text-slate-400" />
-              </div>
-            </div>
-            <h3 className="text-2xl font-bold text-slate-800 mb-2">No teachers found</h3>
-            <p className="text-slate-600">Try adjusting your search criteria or explore different subjects</p>
+            <div className="text-6xl mb-4">👩‍🏫</div>
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">No teachers found</h3>
+            <p className="text-gray-600 mb-4">
+              {teachers.length === 0 
+                ? "No teachers are currently listed. Be the first to register as a teacher!" 
+                : "Try adjusting your search criteria"}
+            </p>
+            {teachers.length === 0 && (
+              <button
+                onClick={() => navigate('/teacher/dashboard')}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200"
+              >
+                Become a Teacher
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -590,7 +941,8 @@ export default function EnhancedTeacherPlatform() {
                   type="date"
                   value={bookingForm.date}
                   onChange={(e) => setBookingForm({...bookingForm, date: e.target.value})}
-                  className="w-full p-3 bg-white/70 backdrop-blur-sm border border-white/30 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200"
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 />
               </div>
 

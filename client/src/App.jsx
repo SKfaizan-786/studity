@@ -117,11 +117,11 @@ function App() {
         />
 
         {/* Teacher Routes */}
-        {/* Teacher Profile Setup: Requires teacher role, profile MUST NOT be complete yet */}
+        {/* Teacher Profile Setup: Requires teacher role, profile can be incomplete or complete */}
         <Route
           path="/teacher/profile-setup"
           element={
-            <ProtectedRoute allowedRoles={[USER_ROLES.TEACHER]} profileCompleteRequired={false}>
+            <ProtectedRoute allowedRoles={[USER_ROLES.TEACHER]} profileCompleteRequired={null}>
               <TeacherProfileForm />
             </ProtectedRoute>
           }

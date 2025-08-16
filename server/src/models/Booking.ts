@@ -1,179 +1,139 @@
-import mongoose, { Document, Schema, Types } from 'mongoose';
+import mongoose, { Document, Schema } from 'mongoose';
 
-// Define Booking interface
 export interface IBooking extends Document {
-  student: Types.ObjectId; // Reference to student
-  teacher: Types.ObjectId; // Reference to teacher
-  course?: Types.ObjectId; // Optional reference to course
+  _id: string;
+  student: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+  };
+  teacher: {
+    id: string;
+    name: string;
+    email: string;
+  };
   subject: string;
-  sessionType: 'one-time' | 'package' | 'course';
-  scheduledDate: Date;
-  duration: number; // in minutes
-  timeSlot: {
-    start: string; // e.g., "10:00"
-    end: string;   // e.g., "11:00"
-  };
+  date: Date;
+  time: string;
+  duration: number; // in hours
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'rescheduled';
-  meetingLink?: string;
-  meetingId?: string;
+  amount: number;
   notes?: string;
-  studentNotes?: string;
-  teacherNotes?: string;
-  price: number;
-  paymentStatus: 'pending' | 'paid' | 'refunded' | 'failed';
-  paymentId?: string;
-  cancellationReason?: string;
-  rescheduledFrom?: Types.ObjectId; // Reference to original booking if rescheduled
-  reminderSent: boolean;
-  feedback?: {
-    rating: number; // 1-5
-    comment?: string;
-    submittedAt: Date;
-  };
+  meetingLink?: string;
   createdAt: Date;
   updatedAt: Date;
+  cancelledBy?: string;
+  cancelReason?: string;
+  rescheduledFrom?: {
+    date: Date;
+    time: string;
+  };
 }
 
-// Booking Schema
-const BookingSchema = new Schema<IBooking>({
+const BookingSchema: Schema = new Schema({
   student: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+    id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    name: { type: String, required: true },
+    email: { type: String, required: true },
+    phone: { type: String, required: true }
   },
   teacher: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+    id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    name: { type: String, required: true },
+    email: { type: String, required: true }
   },
-  course: {
-    type: Schema.Types.ObjectId,
-    ref: 'Course',
-    default: null
-  },
-  subject: {
-    type: String,
+  subject: { 
+    type: String, 
     required: true,
-    trim: true
+    enum: ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'English', 'Other']
   },
-  sessionType: {
-    type: String,
-    enum: ['one-time', 'package', 'course'],
-    default: 'one-time'
+  date: { 
+    type: Date, 
+    required: true 
   },
-  scheduledDate: {
-    type: Date,
-    required: true
-  },
-  duration: {
-    type: Number,
+  time: { 
+    type: String, 
     required: true,
-    min: 30, // minimum 30 minutes
-    max: 240 // maximum 4 hours
+    match: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/
   },
-  timeSlot: {
-    start: {
-      type: String,
-      required: true,
-      match: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/ // HH:MM format
-    },
-    end: {
-      type: String,
-      required: true,
-      match: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/ // HH:MM format
-    }
+  duration: { 
+    type: Number, 
+    required: true,
+    min: 0.5,
+    max: 8
   },
-  status: {
-    type: String,
+  status: { 
+    type: String, 
+    required: true,
     enum: ['pending', 'confirmed', 'completed', 'cancelled', 'rescheduled'],
     default: 'pending'
   },
-  meetingLink: {
-    type: String,
-    default: null
-  },
-  meetingId: {
-    type: String,
-    default: null
-  },
-  notes: {
-    type: String,
-    maxlength: 1000
-  },
-  studentNotes: {
-    type: String,
-    maxlength: 500
-  },
-  teacherNotes: {
-    type: String,
-    maxlength: 500
-  },
-  price: {
-    type: Number,
+  amount: { 
+    type: Number, 
     required: true,
     min: 0
   },
-  paymentStatus: {
-    type: String,
-    enum: ['pending', 'paid', 'refunded', 'failed'],
-    default: 'pending'
-  },
-  paymentId: {
-    type: String,
-    default: null
-  },
-  cancellationReason: {
+  notes: { 
     type: String,
     maxlength: 500
   },
-  rescheduledFrom: {
-    type: Schema.Types.ObjectId,
-    ref: 'Booking',
-    default: null
-  },
-  reminderSent: {
-    type: Boolean,
-    default: false
-  },
-  feedback: {
-    rating: {
-      type: Number,
-      min: 1,
-      max: 5
-    },
-    comment: {
-      type: String,
-      maxlength: 1000
-    },
-    submittedAt: {
-      type: Date
+  meetingLink: { 
+    type: String,
+    validate: {
+      validator: function(v: string) {
+        if (!v) return true; // Optional field
+        return /^https?:\/\/.+/.test(v);
+      },
+      message: 'Meeting link must be a valid URL'
     }
+  },
+  cancelledBy: {
+    type: String,
+    enum: ['student', 'teacher']
+  },
+  cancelReason: {
+    type: String,
+    maxlength: 300
+  },
+  rescheduledFrom: {
+    date: Date,
+    time: String
   }
 }, {
   timestamps: true
 });
 
-// Indexes for better performance
-BookingSchema.index({ student: 1 });
-BookingSchema.index({ teacher: 1 });
-BookingSchema.index({ scheduledDate: 1 });
-BookingSchema.index({ status: 1 });
-BookingSchema.index({ paymentStatus: 1 });
-BookingSchema.index({ teacher: 1, scheduledDate: 1 }); // Compound index for teacher availability
+// Indexes for better query performance
+BookingSchema.index({ 'teacher.id': 1, date: 1 });
+BookingSchema.index({ 'student.id': 1, date: 1 });
+BookingSchema.index({ status: 1, date: 1 });
+BookingSchema.index({ createdAt: -1 });
 
-// Validate that end time is after start time
-BookingSchema.pre('save', function(next) {
-  const startTime = this.timeSlot.start.split(':').map(Number);
-  const endTime = this.timeSlot.end.split(':').map(Number);
-  
-  const startMinutes = startTime[0] * 60 + startTime[1];
-  const endMinutes = endTime[0] * 60 + endTime[1];
-  
-  if (endMinutes <= startMinutes) {
-    return next(new Error('End time must be after start time'));
+// Virtual for booking ID display
+BookingSchema.virtual('bookingId').get(function(this: IBooking) {
+  return `BK${this._id.toString().slice(-6).toUpperCase()}`;
+});
+
+// Pre-save middleware to validate booking date
+BookingSchema.pre('save', function(this: IBooking, next) {
+  if (this.isNew || this.isModified('date')) {
+    const bookingDate = new Date(this.date);
+    const now = new Date();
+    
+    // Booking must be in the future
+    if (bookingDate <= now) {
+      return next(new Error('Booking date must be in the future'));
+    }
+    
+    // Booking can't be more than 90 days in advance
+    const maxDate = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+    if (bookingDate > maxDate) {
+      return next(new Error('Booking date cannot be more than 90 days in advance'));
+    }
   }
   
   next();
 });
 
-export default mongoose.model<IBooking>('Booking', BookingSchema);
+export const Booking = mongoose.model<IBooking>('Booking', BookingSchema);

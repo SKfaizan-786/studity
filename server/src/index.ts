@@ -6,8 +6,14 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import session from 'express-session';
 import passport from 'passport';
-import authRoutes from './routes/auth'; // Your Google Auth routes
-import './passport'; // Passport strategy config
+import authRoutes from './routes/auth';
+import profileRoutes from './routes/profile';
+import bookingRoutes from './routes/bookings';
+import teacherRoutes from './routes/teachers';
+
+// Initialize passport configuration
+// Change this line to the new file name
+import './passport-config'; // ✅ CORRECT IMPORT
 
 dotenv.config();
 
@@ -36,18 +42,36 @@ app.use(session({
 }));
 
 // Passport
-app.use(passport.initialize());
-app.use(passport.session());
+app.use(passport.initialize()); // This will now correctly use the npm package
+app.use(passport.session()); // This will now correctly use the npm package
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI as string)
   .then(() => console.log('✅ Connected to MongoDB'))
   .catch((err) => console.error('❌ MongoDB connection error:', err));
 
+// MongoDB connection status logging
+mongoose.connection.on('connected', () => {
+  console.log('MongoDB connected successfully');
+});
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB connection error:', err);
+});
+
 console.log("RESEND_API_KEY:", process.env.RESEND_API_KEY);
 
 // Routes
+// Debug logging middleware (TEMPORARY)
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  console.log('Headers:', req.headers);
+  if (req.body) console.log('Body:', req.body);
+  next();
+});
 app.use('/api/auth', authRoutes);
+app.use('/api/profile', profileRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/teachers', teacherRoutes);
 
 // Root Route
 app.get('/', (_req, res) => {

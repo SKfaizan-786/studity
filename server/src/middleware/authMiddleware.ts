@@ -1,50 +1,37 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import User, { IUser } from '../models/User';
+import jwt, { type JwtPayload } from 'jsonwebtoken';
+import User, { IUser } from '../models/User'; // Ensure this path is correct
+import mongoose from 'mongoose'; // Keep this import
 
-// Extend Request interface locally
-declare module 'express-serve-static-core' {
-  interface Request {
-    user?: IUser;
+// Define AuthenticatedRequest interface
+export interface AuthenticatedRequest extends Request {
+  user?: IUser;
+}
+
+// !!! REMOVE THE 'declare global' BLOCK FROM HERE !!!
+// It should NOT be in this file. It belongs in a .d.ts file.
+/*
+declare global {
+  namespace Express {
+    interface Request {
+      user?: any; // THIS IS THE CONFLICTING PART
+    }
   }
 }
+*/
 
-interface JwtPayload {
-  _id: string;
-  iat?: number;
-  exp?: number;
-}
-
-/**
- * Auth Middleware - Protects routes by verifying JWT tokens
- * 
- * This middleware:
- * 1. Extracts JWT token from Authorization header
- * 2. Verifies the token using JWT_SECRET
- * 3. Finds the user in database
- * 4. Attaches user object to req.user
- * 5. Allows request to continue to protected route
- */
-export const authMiddleware = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
+export const authMiddleware = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    // 1. Get token from Authorization header
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      res.status(401).json({ 
-        message: 'Access denied. No token provided or invalid format.' 
-      });
-      return;
+    let token = req.header('Authorization');
+
+    if (!token) {
+      console.log('No Authorization header provided.');
+      return res.status(401).json({ message: 'No token, authorization denied' });
     }
 
-    // Extract token (remove 'Bearer ' prefix)
-    const token = authHeader.substring(7);
+    // Clean the token: remove 'Bearer ' prefix and any surrounding quotes
+    token = token.replace(/^"|"$/g, '').replace('Bearer ', '');
 
-    // 2. Verify JWT token
     const jwtSecret = process.env.JWT_SECRET;
     if (!jwtSecret) {
       res.status(500).json({ 
@@ -53,9 +40,9 @@ export const authMiddleware = async (
       return;
     }
 
-    const decoded = jwt.verify(token, jwtSecret) as JwtPayload;
+    const decoded = jwt.verify(token, jwtSecret) as { _id: string; iat: number; exp: number };
 
-    // 3. Find user in database
+    // Find user in database
     const user = await User.findById(decoded._id).select('-password');
     
     if (!user) {
@@ -65,32 +52,20 @@ export const authMiddleware = async (
       return;
     }
 
-    // 4. Attach user to request object
     req.user = user;
-
-    // 5. Continue to next middleware/route handler
     next();
 
   } catch (error) {
-    // Handle different JWT errors
     if (error instanceof jwt.JsonWebTokenError) {
-      res.status(401).json({ 
-        message: 'Invalid token' 
-      });
+      res.status(401).json({ message: 'Invalid token' });
       return;
     }
-    
     if (error instanceof jwt.TokenExpiredError) {
-      res.status(401).json({ 
-        message: 'Token has expired' 
-      });
+      res.status(401).json({ message: 'Token has expired' });
       return;
     }
-
     console.error('Auth middleware error:', error);
-    res.status(500).json({ 
-      message: 'Server error during authentication' 
-    });
+    res.status(500).json({ message: 'Server error during authentication' });
   }
 };
 

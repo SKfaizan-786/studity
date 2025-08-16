@@ -90,12 +90,14 @@ export const login = async (req: Request, res: Response) => {
     const token = generateToken({ _id: user._id });
 
     res.status(200).json({
-      _id: user._id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      role: user.role,
-      profileComplete: user.profileComplete,
+      user: {
+        _id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        profileComplete: user.profileComplete,
+      },
       token,
     });
   } catch (err) {

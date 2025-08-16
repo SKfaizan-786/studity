@@ -1,21 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
-import { AuthenticatedRequest } from './authMiddleware';
 
-export const requireRole = (requiredRole: string) => {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    if (!req.user) {
-      return res.status(401).json({ message: 'Please authenticate' });
-    }
-
-    if (req.user.role !== requiredRole) {
-      return res.status(403).json({ 
-        message: `Access denied. Requires ${requiredRole} role` 
-      });
-    }
-
-    next();
-  };
-};
 import { Request, Response, NextFunction } from 'express';
 import { getAuthenticatedUser } from '../utils/authHelpers';
 import { IUser } from '../models/User';
@@ -29,7 +12,6 @@ declare module 'express-serve-static-core' {
 
 /**
  * Role Check Middleware - Ensures user has required role(s)
- * 
  * This middleware should be used AFTER authMiddleware
  * It checks if the authenticated user has the required role
  */
@@ -38,10 +20,8 @@ export const requireRole = (allowedRoles: string | string[]) => {
     try {
       // Get authenticated user using helper function
       const user = getAuthenticatedUser(req);
-      
       // Convert single role to array for consistency
       const rolesArray = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
-      
       // Check if user's role is in allowed roles
       if (!rolesArray.includes(user.role)) {
         res.status(403).json({ 
@@ -49,7 +29,6 @@ export const requireRole = (allowedRoles: string | string[]) => {
         });
         return;
       }
-
       // User has correct role, continue to route handler
       next();
     } catch (error) {

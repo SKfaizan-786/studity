@@ -4,18 +4,13 @@ import {
   User,
   Mail,
   Phone,
-  MapPin,
   Calendar,
-  Edit,
+  Home,
   Save,
   X,
-  GraduationCap,
-  BookOpen,
-  Award,
-  Clock,
-  Home
+  Book,
+  CheckCircle,
 } from 'lucide-react';
-import { getFromLocalStorage, setToLocalStorage } from '../utils/storage';
 
 const StudentProfile = () => {
   const navigate = useNavigate();
@@ -24,6 +19,25 @@ const StudentProfile = () => {
   const [editedProfile, setEditedProfile] = useState({});
   const [loading, setLoading] = useState(true);
 
+  // Helper functions for localStorage
+  const getFromLocalStorage = (key) => {
+    try {
+      const value = localStorage.getItem(key);
+      return value ? JSON.parse(value) : null;
+    } catch (error) {
+      console.error("Failed to get from localStorage:", error);
+      return null;
+    }
+  };
+
+  const setToLocalStorage = (key, value) => {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      console.error("Failed to set to localStorage:", error);
+    }
+  };
+
   useEffect(() => {
     const user = getFromLocalStorage('currentUser');
     if (!user || user.role !== 'student') {
@@ -31,31 +45,85 @@ const StudentProfile = () => {
       return;
     }
     setCurrentUser(user);
-    setEditedProfile(user);
+    // Initialize editedProfile with a deep merge of currentUser and studentProfile
+    setEditedProfile({
+      ...user,
+      ...user.studentProfile,
+      // Ensure subjects and learningGoals are initialized as arrays for editing
+      subjects: user.studentProfile?.subjects || [],
+      learningGoals: user.studentProfile?.learningGoals || [],
+    });
     setLoading(false);
   }, [navigate]);
 
-  const handleEdit = () => {
-    setIsEditing(true);
-  };
+  const handleSave = async () => {
+    const token = getFromLocalStorage('token');
+    if (!token) {
+      alert('No authentication token found');
+      return;
+    }
 
-  const handleSave = () => {
-    // Update localStorage with edited profile
-    setToLocalStorage('currentUser', editedProfile);
-    setCurrentUser(editedProfile);
-    setIsEditing(false);
-    // In a real app, you'd also send this to your backend API
+    // Merge the updated data before sending
+    const updatedData = {
+      ...currentUser.studentProfile, // Start with all existing student profile fields
+      ...editedProfile, // Overwrite with any changes from the edited state
+      // Ensure specific fields are correctly formatted before sending
+      subjects: Array.isArray(editedProfile.subjects) ? editedProfile.subjects : [],
+      learningGoals: Array.isArray(editedProfile.learningGoals) ? editedProfile.learningGoals : [],
+    };
+    
+    // The API might expect fields from the root user object as well, so merge them too
+    const finalProfileData = {
+        firstName: updatedData.firstName,
+        lastName: updatedData.lastName,
+        phone: updatedData.phone,
+        location: updatedData.location,
+        bio: updatedData.bio,
+        photoUrl: updatedData.photoUrl || '',
+        grade: updatedData.grade,
+        board: updatedData.board,
+        subjects: updatedData.subjects,
+        learningGoals: updatedData.learningGoals,
+    };
+
+    try {
+      const response = await fetch('http://localhost:5000/api/profile/student', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(finalProfileData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert(result.message || 'Failed to update profile');
+        return;
+      }
+
+      setToLocalStorage('currentUser', result.user);
+      setCurrentUser(result.user);
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Save failed:', error);
+      alert('Failed to update profile due to a network error.');
+    }
   };
 
   const handleCancel = () => {
-    setEditedProfile(currentUser);
+    setEditedProfile({
+      ...currentUser,
+      ...currentUser.studentProfile,
+    });
     setIsEditing(false);
   };
 
   const handleInputChange = (field, value) => {
-    setEditedProfile(prev => ({
+    setEditedProfile((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
@@ -71,6 +139,31 @@ const StudentProfile = () => {
   }
 
   if (!currentUser) return null;
+
+  const getProfileField = (field, fallback = 'Not provided') => {
+    const value = isEditing ? editedProfile[field] : (currentUser.studentProfile && currentUser.studentProfile[field]) || currentUser[field];
+    return value || fallback;
+  };
+
+  const profileImage = getProfileField('photoUrl') || '/default-profile.png';
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  let createdAt = currentUser.createdAt;
+  if (!createdAt && currentUser.studentProfile && currentUser.studentProfile.createdAt) {
+    createdAt = currentUser.studentProfile.createdAt;
+  }
+  if (!createdAt) {
+    createdAt = new Date().toISOString();
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 relative overflow-hidden">
@@ -101,214 +194,191 @@ const StudentProfile = () => {
         </div>
 
         {/* Profile Card */}
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 overflow-hidden">
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
             {/* Profile Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-6 text-white">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center">
-                    <User className="w-10 h-10" />
+            <div className="bg-gradient-to-r from-blue-700 to-purple-700 px-10 py-8 text-white flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+              <div className="flex items-center gap-6">
+                <div className="w-28 h-28 bg-white/30 rounded-full flex items-center justify-center overflow-hidden border-4 border-white/40 shadow-lg">
+                  {profileImage ? (
+                    <img src={profileImage} alt="Profile" className="w-28 h-28 object-cover rounded-full" />
+                  ) : (
+                    <User className="w-12 h-12" />
+                  )}
+                </div>
+                <div>
+                  <h2 className="text-3xl font-extrabold tracking-tight">
+                    {getProfileField('firstName')} {getProfileField('lastName')}
+                  </h2>
+                  <p className="text-blue-100 text-lg font-medium">Student</p>
+                  <div className="flex items-center space-x-2 mt-2">
+                    <Mail className="w-5 h-5" />
+                    <span className="text-base">{currentUser.email}</span>
+                  </div>
+                </div>
+              </div>
+              {!isEditing ? (
+                <button
+                  className="bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-xl font-semibold shadow-lg border border-white/30 transition-all duration-150"
+                  onClick={() => setIsEditing(true)}
+                >
+                  Edit Profile
+                </button>
+              ) : (
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleSave}
+                    className="flex items-center space-x-2 px-6 py-2 bg-green-500 hover:bg-green-600 rounded-xl font-semibold shadow-lg border border-green-600 text-white transition-all duration-150"
+                  >
+                    <Save className="w-5 h-5" />
+                    <span>Save</span>
+                  </button>
+                  <button
+                    onClick={handleCancel}
+                    className="flex items-center space-x-2 px-6 py-2 bg-red-500 hover:bg-red-600 rounded-xl font-semibold shadow-lg border border-red-600 text-white transition-all duration-150"
+                  >
+                    <X className="w-5 h-5" />
+                    <span>Cancel</span>
+                  </button>
+                </div>
+              )}
+            </div>
+            {/* Profile Content */}
+            <div className="p-10 grid grid-cols-1 md:grid-cols-2 gap-10">
+              {/* Personal Information */}
+              <div>
+                <h3 className="text-xl font-bold mb-5 text-blue-700 flex items-center gap-2"><User className="w-6 h-6" /> Personal Information</h3>
+                <div className="space-y-5">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">First Name</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editedProfile.firstName || ''}
+                        onChange={(e) => handleInputChange('firstName', e.target.value)}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                      />
+                    ) : (
+                      <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">{getProfileField('firstName')}</p>
+                    )}
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold">
-                      {currentUser.firstName} {currentUser.lastName}
-                    </h2>
-                    <p className="text-blue-100">Student</p>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <Mail className="w-4 h-4" />
-                      <span className="text-sm">{currentUser.email}</span>
-                    </div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Last Name</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editedProfile.lastName || ''}
+                        onChange={(e) => handleInputChange('lastName', e.target.value)}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                      />
+                    ) : (
+                      <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">{getProfileField('lastName')}</p>
+                    )}
                   </div>
-                </div>
-
-                {!isEditing ? (
-                  <button
-                    onClick={handleEdit}
-                    className="flex items-center space-x-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors duration-200"
-                  >
-                    <Edit className="w-4 h-4" />
-                    <span>Edit Profile</span>
-                  </button>
-                ) : (
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={handleSave}
-                      className="flex items-center space-x-2 px-4 py-2 bg-green-500 hover:bg-green-600 rounded-lg transition-colors duration-200"
-                    >
-                      <Save className="w-4 h-4" />
-                      <span>Save</span>
-                    </button>
-                    <button
-                      onClick={handleCancel}
-                      className="flex items-center space-x-2 px-4 py-2 bg-red-500 hover:bg-red-600 rounded-lg transition-colors duration-200"
-                    >
-                      <X className="w-4 h-4" />
-                      <span>Cancel</span>
-                    </button>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Email</label>
+                    <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">{currentUser.email}</p>
+                    <span className="text-xs text-slate-400">Email cannot be changed</span>
                   </div>
-                )}
-              </div>
-            </div>
-
-            {/* Profile Content */}
-            <div className="p-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Personal Information */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-slate-900 flex items-center space-x-2">
-                    <User className="w-5 h-5 text-blue-600" />
-                    <span>Personal Information</span>
-                  </h3>
-
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">First Name</label>
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          value={editedProfile.firstName || ''}
-                          onChange={(e) => handleInputChange('firstName', e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      ) : (
-                        <p className="text-slate-900 bg-slate-50 px-3 py-2 rounded-lg">{currentUser.firstName || 'Not provided'}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Last Name</label>
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          value={editedProfile.lastName || ''}
-                          onChange={(e) => handleInputChange('lastName', e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      ) : (
-                        <p className="text-slate-900 bg-slate-50 px-3 py-2 rounded-lg">{currentUser.lastName || 'Not provided'}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                      <p className="text-slate-900 bg-slate-50 px-3 py-2 rounded-lg">{currentUser.email}</p>
-                      <p className="text-xs text-slate-500 mt-1">Email cannot be changed</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Phone Number</label>
-                      {isEditing ? (
-                        <input
-                          type="tel"
-                          value={editedProfile.phone || ''}
-                          onChange={(e) => handleInputChange('phone', e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="Enter phone number"
-                        />
-                      ) : (
-                        <p className="text-slate-900 bg-slate-50 px-3 py-2 rounded-lg">{currentUser.phone || 'Not provided'}</p>
-                      )}
-                    </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Phone Number</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editedProfile.phone || ''}
+                        onChange={(e) => handleInputChange('phone', e.target.value)}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                      />
+                    ) : (
+                      <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">{getProfileField('phone')}</p>
+                    )}
                   </div>
-                </div>
-
-                {/* Academic Information */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-slate-900 flex items-center space-x-2">
-                    <GraduationCap className="w-5 h-5 text-blue-600" />
-                    <span>Academic Information</span>
-                  </h3>
-
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Grade Level</label>
-                      {isEditing ? (
-                        <select
-                          value={editedProfile.gradeLevel || ''}
-                          onChange={(e) => handleInputChange('gradeLevel', e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Select Grade Level</option>
-                          <option value="elementary">Elementary (K-5)</option>
-                          <option value="middle">Middle School (6-8)</option>
-                          <option value="high">High School (9-12)</option>
-                          <option value="college">College/University</option>
-                          <option value="adult">Adult Education</option>
-                        </select>
-                      ) : (
-                        <p className="text-slate-900 bg-slate-50 px-3 py-2 rounded-lg">{currentUser.gradeLevel || 'Not provided'}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Subjects of Interest</label>
-                      {isEditing ? (
-                        <textarea
-                          value={editedProfile.subjectsOfInterest || ''}
-                          onChange={(e) => handleInputChange('subjectsOfInterest', e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          rows="3"
-                          placeholder="e.g., Mathematics, Science, English, History..."
-                        />
-                      ) : (
-                        <p className="text-slate-900 bg-slate-50 px-3 py-2 rounded-lg min-h-[80px]">{currentUser.subjectsOfInterest || 'Not provided'}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Learning Goals</label>
-                      {isEditing ? (
-                        <textarea
-                          value={editedProfile.learningGoals || ''}
-                          onChange={(e) => handleInputChange('learningGoals', e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          rows="3"
-                          placeholder="What are your learning objectives?"
-                        />
-                      ) : (
-                        <p className="text-slate-900 bg-slate-50 px-3 py-2 rounded-lg min-h-[80px]">{currentUser.learningGoals || 'Not provided'}</p>
-                      )}
-                    </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Bio</label>
+                    {isEditing ? (
+                      <textarea
+                        value={editedProfile.bio || ''}
+                        onChange={(e) => handleInputChange('bio', e.target.value)}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                        rows="3"
+                        placeholder="Tell us about yourself"
+                      />
+                    ) : (
+                      <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base min-h-[60px]">{getProfileField('bio')}</p>
+                    )}
                   </div>
                 </div>
               </div>
-
+              {/* Academic Information */}
+              <div>
+                <h3 className="text-xl font-bold mb-5 text-purple-700 flex items-center gap-2"><Book className="w-6 h-6" /> Academic Information</h3>
+                <div className="space-y-5">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Grade Level</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editedProfile.grade || ''}
+                        onChange={(e) => handleInputChange('grade', e.target.value)}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
+                      />
+                    ) : (
+                      <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">{getProfileField('grade')}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Subjects of Interest</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={Array.isArray(editedProfile.subjects) ? editedProfile.subjects.join(', ') : (editedProfile.subjects || '')}
+                        onChange={(e) => handleInputChange('subjects', e.target.value.split(',').map(s => s.trim()))}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
+                      />
+                    ) : (
+                      <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">{getProfileField('subjects') && Array.isArray(getProfileField('subjects')) ? getProfileField('subjects').join(', ') : getProfileField('subjects')}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Learning Goals</label>
+                    {isEditing ? (
+                      <textarea
+                        value={Array.isArray(editedProfile.learningGoals) ? editedProfile.learningGoals.join('\n') : (editedProfile.learningGoals || '')}
+                        onChange={(e) => handleInputChange('learningGoals', e.target.value.split('\n'))}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
+                        rows="3"
+                        placeholder="What are your learning objectives?"
+                      />
+                    ) : (
+                      <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base min-h-[80px]">{getProfileField('learningGoals') && Array.isArray(getProfileField('learningGoals')) ? getProfileField('learningGoals').join(', ') : getProfileField('learningGoals')}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
               {/* Account Status */}
-              <div className="mt-8 pt-6 border-t border-slate-200">
-                <h3 className="text-lg font-semibold text-slate-900 flex items-center space-x-2 mb-4">
-                  <Award className="w-5 h-5 text-blue-600" />
-                  <span>Account Status</span>
-                </h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="font-medium text-green-800">Profile Status</span>
-                    </div>
-                    <p className="text-green-700 mt-1">
-                      {currentUser.profileComplete ? 'Complete' : 'Incomplete'}
-                    </p>
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-8 mt-10">
+                <div className="bg-gradient-to-r from-green-50 to-green-100 p-5 rounded-xl shadow flex flex-col items-start">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <span className="font-semibold text-green-800">Profile Status</span>
                   </div>
-                  
-                  <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="w-4 h-4 text-blue-600" />
-                      <span className="font-medium text-blue-800">Member Since</span>
-                    </div>
-                    <p className="text-blue-700 mt-1">
-                      {currentUser.createdAt ? new Date(currentUser.createdAt).toLocaleDateString() : 'Recently'}
-                    </p>
+                  <p className="text-green-700 mt-2 text-base">{currentUser.profileComplete ? 'Complete' : 'Incomplete'}</p>
+                </div>
+                <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-5 rounded-xl shadow flex flex-col items-start">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-blue-600" />
+                    <span className="font-semibold text-blue-800">Member Since</span>
                   </div>
-                  
-                  <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      <BookOpen className="w-4 h-4 text-purple-600" />
-                      <span className="font-medium text-purple-800">Role</span>
-                    </div>
-                    <p className="text-purple-700 mt-1 capitalize">{currentUser.role}</p>
+                  <p className="text-blue-700 mt-2 text-base">
+                    {formatDate(createdAt)}
+                  </p>
+                </div>
+                <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 p-5 rounded-xl shadow flex flex-col items-start">
+                  <div className="flex items-center gap-2">
+                    <User className="w-5 h-5 text-yellow-600" />
+                    <span className="font-semibold text-yellow-800">Role</span>
                   </div>
+                  <p className="text-yellow-700 mt-2 text-base">{currentUser.role}</p>
                 </div>
               </div>
             </div>
@@ -317,6 +387,6 @@ const StudentProfile = () => {
       </div>
     </div>
   );
-};
+}
 
 export default StudentProfile;

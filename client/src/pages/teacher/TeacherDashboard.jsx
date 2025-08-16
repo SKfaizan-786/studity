@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
-  CalendarDays, Users, DollarSign, LogOut,  UserRound, ArrowRight, CheckCircle, Wallet, ListChecks, LayoutDashboard, Settings, Loader2, Info, XCircle, Bell, MessageSquare, Award, MonitorCheck, Home, Search, HelpCircle
+  CalendarDays, Users, DollarSign, LogOut, UserRound, ArrowRight, CheckCircle,
+  Wallet, ListChecks, LayoutDashboard, Settings, Loader2, Info, XCircle, Bell, MessageSquare, Award, MonitorCheck
 } from 'lucide-react';
 
 // Import your storage utility functions
@@ -14,9 +15,11 @@ const LISTING_FEE = 100; // Define listing fee as a constant for easy updates.
 // In a real application, this data would come from a backend API.
 const seedTeacherDashboardData = () => {
   // Ensure 'currentUser' exists for a teacher
-  if (!getFromLocalStorage('currentUser')) {
+  const existingUser = getFromLocalStorage('currentUser');
+  if (!existingUser) {
     setToLocalStorage('currentUser', {
       id: 101,
+      _id: 101,
       firstName: 'Anya',
       lastName: 'Sharma',
       email: 'anya.sharma@example.com',
@@ -39,9 +42,13 @@ const seedTeacherDashboardData = () => {
         teachingApproach: 'Interactive sessions with real-world examples and problem-solving focus.',
         achievements: [{ id: 1, text: 'Mentored 100+ students to crack JEE' }],
         hourlyRate: 800,
-        photoPreviewUrl: 'https://randomuser.me/api/portraits/women/68.jpg'
+        photoUrl: 'https://randomuser.me/api/portraits/women/68.jpg'
       }
     });
+  } else if (existingUser && existingUser.role === 'teacher' && !existingUser.id && !existingUser._id) {
+    // Add ID if missing
+    const updatedUser = { ...existingUser, id: 101, _id: 101 };
+    setToLocalStorage('currentUser', updatedUser);
   }
 
   // Ensure 'registeredUsers' is also consistent with 'currentUser'
@@ -58,23 +65,14 @@ const seedTeacherDashboardData = () => {
     setToLocalStorage('registeredUsers', registeredUsers);
   }
 
-  // Mock bookings for upcoming sessions and new inquiries
+  // Mock bookings and inquiries removed - will be fetched from backend
+  // TODO: Implement actual API endpoints for bookings and inquiries
   if (!getFromLocalStorage('teacherBookings')) {
-    setToLocalStorage('teacherBookings', [
-      { id: 'b1', teacherId: 101, studentName: 'Rahul Sharma', subject: 'Physics', date: '2025-07-05', time: '10:00 AM', status: 'confirmed' },
-      { id: 'b2', teacherId: 101, studentName: 'Priya Singh', subject: 'Mathematics', date: '2025-07-06', time: '04:00 PM', status: 'pending' },
-      { id: 'b3', teacherId: 101, studentName: 'Amit Kumar', subject: 'Physics', date: '2025-07-07', time: '11:00 AM', status: 'confirmed' },
-      { id: 'b4', teacherId: 102, studentName: 'Another Student', subject: 'Chemistry', date: '2025-07-08', time: '01:00 PM', status: 'confirmed' }, // For another teacher
-    ]);
+    setToLocalStorage('teacherBookings', []); // Empty array instead of mock data
   }
 
-  // Mock inquiries/messages
   if (!getFromLocalStorage('teacherInquiries')) {
-    setToLocalStorage('teacherInquiries', [
-      { id: 'i1', teacherId: 101, studentName: 'Student A', message: 'Interested in Class 12 Physics for JEE.', read: false, timestamp: '2025-07-01T10:00:00Z' },
-      { id: 'i2', teacherId: 101, studentName: 'Student B', message: 'Availability for weekend math classes?', read: false, timestamp: '2025-07-01T11:30:00Z' },
-      { id: 'i3', teacherId: 101, studentName: 'Student C', message: 'Can you teach advanced calculus?', read: true, timestamp: '2025-06-28T15:00:00Z' },
-    ]);
+    setToLocalStorage('teacherInquiries', []); // Empty array instead of mock data
   }
 };
 // --- End Mock Data Seeding ---
@@ -84,13 +82,12 @@ const seedTeacherDashboardData = () => {
  * @param {{ icon: React.ElementType, title: string, children: React.ReactNode, className?: string }} props
  */
 const DashboardCard = ({ icon: Icon, title, children, className = '' }) => (
-  <div className={`relative bg-white/60 backdrop-blur-sm p-6 rounded-2xl shadow-sm border border-white/40 overflow-hidden
-    transform hover:scale-[1.02] transition-all duration-300 hover:shadow-violet-700/50 ${className}`}>
-    <div className="absolute inset-0 bg-gradient-to-br from-violet-900/10 to-purple-900/10 opacity-5 group-hover:opacity-10 transition-opacity duration-300"></div>
+  <div className={`relative bg-white/90 shadow-lg p-6 rounded-2xl border border-gray-200 overflow-hidden
+    transform hover:scale-[1.02] transition-all duration-300 hover:shadow-purple-400/40 ${className}`}>
     <div className="relative z-10 flex flex-col h-full">
       <div className="flex items-center gap-3 mb-4">
-        {Icon && <Icon className="w-8 h-8 text-purple-400" />}
-        <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-300 to-purple-300">{title}</h2>
+        {Icon && <Icon className="w-8 h-8 text-purple-600" />}
+        <h2 className="text-2xl font-bold text-slate-800">{title}</h2>
       </div>
       <div className="flex-grow flex flex-col justify-center">
         {children}
@@ -103,9 +100,9 @@ const DashboardCard = ({ icon: Icon, title, children, className = '' }) => (
  * A component to display a single statistic row with futuristic styling.
  * @param {{ label: string, value: string | number, valueClassName?: string }} props
  */
-const StatRow = ({ label, value, valueClassName = 'text-purple-300' }) => (
-  <div className="flex items-center justify-between p-3 bg-gray-700 rounded-lg shadow-inner border border-gray-600">
-    <span className="text-slate-600 font-medium">{label}:</span>
+const StatRow = ({ label, value, valueClassName = 'text-purple-700' }) => (
+  <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg shadow-inner border border-gray-200">
+    <span className="text-slate-700 font-medium">{label}:</span>
     <span className={`text-xl font-bold ${valueClassName}`}>{value}</span>
   </div>
 );
@@ -139,6 +136,9 @@ export default function TeacherDashboard() {
   });
   const [statsLoading, setStatsLoading] = useState(true);
 
+  // A single state for listing status
+  const [isListed, setIsListed] = useState(false);
+
   // Function to show transient messages (e.g., success, error)
   const showMessage = useCallback((text, type = 'info', duration = 3000) => {
     setMessage(text);
@@ -149,17 +149,57 @@ export default function TeacherDashboard() {
     }, duration);
   }, []);
 
-  const fetchUserData = useCallback(() => {
+  // Consolidated function to fetch user data and listing status
+  const fetchUserData = useCallback(async () => {
+    setLoading(true);
     try {
-      const user = getFromLocalStorage('currentUser');
-      if (user && user.role === 'teacher') {
-        setCurrentUser(user);
-      } else {
+      const token = localStorage.getItem('token');
+      let user = getFromLocalStorage('currentUser');
+
+      if (token) {
+        try {
+          const cleanToken = token.replace(/^"(.*)"$/, '$1');
+          const response = await fetch('http://localhost:5000/api/profile/teacher', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${cleanToken}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (response.ok) {
+            const profileData = await response.json();
+            user = {
+              ...user,
+              ...profileData,
+              id: user?.id || profileData._id,
+              _id: user?._id || profileData._id,
+              teacherProfileData: profileData.teacherProfile || user?.teacherProfileData,
+            };
+            setToLocalStorage('currentUser', user);
+          } else {
+            console.warn('Failed to fetch profile from backend, using localStorage');
+          }
+        } catch (apiError) {
+          console.warn('Backend not available, using localStorage:', apiError);
+        }
+      }
+
+      // If no user is found, redirect to login
+      if (!user || user.role !== 'teacher') {
         showMessage("Access denied. Please log in as a teacher.", 'error');
         navigate('/login', { replace: true });
+        return;
       }
+      
+      // Ensure user has a valid ID for consistency
+      const userWithId = { ...user, id: user.id || user._id || 101, _id: user._id || user.id || 101 };
+
+      // Update state
+      setCurrentUser(userWithId);
+      setIsListed(userWithId.teacherProfileData?.isListed || false);
     } catch (error) {
-      console.error("Failed to parse user data from localStorage:", error);
+      console.error("Failed to load user data:", error);
       showMessage("Error loading user data. Please try logging in again.", 'error');
       navigate('/login', { replace: true });
     } finally {
@@ -177,80 +217,71 @@ export default function TeacherDashboard() {
     };
   }, [fetchUserData]);
 
-  // Simulate fetching dashboard metrics from an API
+  // TODO: Replace with actual API calls to backend
   useEffect(() => {
-    if (currentUser && currentUser.id) { // Ensure currentUser and its ID are available
-      setStatsLoading(true);
-      setTimeout(() => {
-        const teacherBookings = getFromLocalStorage('teacherBookings', []);
-        const teacherInquiries = getFromLocalStorage('teacherInquiries', []);
-
-        const upcomingSessions = teacherBookings.filter(b =>
-          b.teacherId === currentUser.id &&
-          b.status === 'confirmed' &&
-          new Date(b.date) >= new Date() // Only count future dates
-        ).length;
-
-        const newInquiries = teacherInquiries.filter(i =>
-          i.teacherId === currentUser.id && !i.read
-        ).length;
-
-        // Simplified earnings calculation for mock data
-        const totalEarnings = teacherBookings.filter(b =>
-          b.teacherId === currentUser.id && b.status === 'confirmed'
-        ).length * 800; // Assuming 800 INR per confirmed session for simplicity
-
-        setStats({
-          upcomingSessions,
-          newInquiries,
-          totalEarnings,
-        });
-        setStatsLoading(false);
-      }, 1500); // Simulate network delay
+    if (currentUser && (currentUser.id || currentUser._id)) {
+      // For now, show zero values until backend APIs are implemented
+      setStats({
+        upcomingSessions: 0,
+        newInquiries: 0,
+        totalEarnings: 0,
+      });
+      setStatsLoading(false);
     }
   }, [currentUser]);
 
-  const teacherProfile = currentUser?.teacherProfileData || {};
+  const teacherProfile = currentUser?.teacherProfileData || currentUser?.teacherProfile || {};
   const isProfileComplete = currentUser?.profileComplete || false;
-  const isListed = teacherProfile.isListed || false;
 
-  const handleGetListed = useCallback(async () => {
-    if (isProcessingListing || !isProfileComplete) return;
-
-    setIsProcessingListing(true);
-    showMessage("Processing your listing fee...", 'info');
-
+  const handleGetListed = async () => {
     try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2500));
+      setIsProcessingListing(true);
 
-      const updatedUser = {
-        ...currentUser,
-        teacherProfileData: {
-          ...currentUser.teacherProfileData,
-          isListed: true,
-          listedAt: new Date().toISOString(),
+      const token = localStorage.getItem('token');
+      if (!token) {
+        showMessage('Authentication token not found. Please log in.', 'error');
+        navigate('/login');
+        return;
+      }
+
+      // Call the API to update listing status
+      const response = await fetch('http://localhost:5000/api/profile/teacher/listing', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token.replace(/^"(.*)"$/, '$1')}`
         },
-      };
+        body: JSON.stringify({ isListed: true })
+      });
 
-      // Update both currentUser and the main registeredUsers list for consistency
-      setToLocalStorage('currentUser', updatedUser);
-      let allUsers = getFromLocalStorage('registeredUsers', []);
-      const updatedAllUsers = allUsers.map(user =>
-        user.email === updatedUser.email ? updatedUser : user
-      );
-      setToLocalStorage('registeredUsers', updatedAllUsers);
+      if (response.ok) {
+        const data = await response.json();
 
-      setCurrentUser(updatedUser); // Update state to trigger re-render
-      showMessage("Congratulations! You are now listed and discoverable! 🎉", 'success');
+        // Update local state and localStorage
+        const updatedUser = {
+          ...currentUser,
+          teacherProfileData: {
+            ...teacherProfile,
+            isListed: true,
+            listedAt: data.listedAt
+          }
+        };
+        setCurrentUser(updatedUser);
+        setToLocalStorage('currentUser', updatedUser);
+        setIsListed(true); // Update the isListed state directly
 
+        showMessage('🎉 Congratulations! You are now listed as a teacher. Students can find and book classes with you.', 'success');
+      } else {
+        const errorData = await response.json();
+        showMessage(`Error: ${errorData.message || 'Failed to get listed.'}`, 'error');
+      }
     } catch (error) {
-      console.error("Error updating localStorage after listing:", error);
-      showMessage("Failed to update listing status. Please try again.", 'error');
+      console.error('Error getting listed:', error);
+      showMessage('Failed to get listed. Please try again.', 'error');
     } finally {
       setIsProcessingListing(false);
     }
-  }, [isProcessingListing, isProfileComplete, currentUser, showMessage]);
+  };
 
   if (loading) {
     return (
@@ -268,11 +299,11 @@ export default function TeacherDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 text-slate-900 font-inter p-4 sm:p-6 lg:p-10 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-white via-indigo-100 to-purple-100 text-slate-900 font-inter p-4 sm:p-6 lg:p-10 relative overflow-hidden">
       {/* Animated gradient orbs for background effect */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/30 to-purple-600/30 rounded-full blur-3xl animate-float"></div>
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-purple-400/20 to-pink-600/20 rounded-full blur-3xl animate-float-delayed"></div>
+      <div className="absolute inset-0 overflow-hidden pointer-events-none select-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-600/20 rounded-full blur-3xl animate-float"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-tr from-purple-400/10 to-pink-600/10 rounded-full blur-3xl animate-float-delayed"></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-r from-indigo-400/10 to-blue-600/10 rounded-full blur-3xl animate-float-slow"></div>
       </div>
       
@@ -293,38 +324,45 @@ export default function TeacherDashboard() {
       )}
 
       <header className="text-center mb-10">
-        <Link to="/" className="inline-block group mb-4">
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center gap-3 group-hover:from-blue-700 group-hover:to-purple-700 transition-all duration-300">
-            <LayoutDashboard className="w-10 h-10 text-blue-600 group-hover:text-blue-700 transition-colors duration-300" /> Teacher Dashboard
-          </h1>
-        </Link>
-        <p className="text-slate-600 mt-2 text-lg">
-          Welcome back, <span className="font-semibold text-purple-300">{teacherProfile.firstName || 'Teacher'}!</span>
-        </p>
-        <p className="text-slate-500 text-sm">{currentUser.email}</p>
-        
-        {/* Navigation Links */}
-        <div className="flex justify-center space-x-4 mt-4 mb-4">
-          <Link
-            to="/pricing"
-            className="flex items-center space-x-2 px-4 py-2 bg-white/60 backdrop-blur-sm text-slate-700 rounded-lg hover:bg-white/80 transition-colors duration-200 shadow-sm border border-white/40 group"
-          >
-            <DollarSign className="w-4 h-4 group-hover:text-blue-600 transition-colors duration-200" />
-            <span className="group-hover:text-blue-600 transition-colors duration-200">Pricing</span>
-          </Link>
-          <Link
-            to="/help"
-            className="flex items-center space-x-2 px-4 py-2 bg-white/60 backdrop-blur-sm text-slate-700 rounded-lg hover:bg-white/80 transition-colors duration-200 shadow-sm border border-white/40 group"
-          >
-            <HelpCircle className="w-4 h-4 group-hover:text-blue-600 transition-colors duration-200" />
-            <span className="group-hover:text-blue-600 transition-colors duration-200">Help</span>
-          </Link>
+        <div className="flex items-center justify-center gap-4 mb-4">
+          {/* Teacher Profile Image */}
+          <div className="relative animate-float">
+            <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-purple-400 shadow-lg bg-gray-200 hover:border-purple-300 transition-all duration-300">
+              {currentUser?.teacherProfileData?.photoUrl || currentUser?.teacherProfile?.photoUrl ? (
+                <img
+                  src={currentUser.teacherProfileData?.photoUrl || currentUser.teacherProfile?.photoUrl}
+                  alt={`${currentUser?.firstName} ${currentUser?.lastName}`}
+                  className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-400 to-violet-500 text-white text-2xl font-bold">
+                  {currentUser?.firstName ? currentUser.firstName.charAt(0).toUpperCase() : 'T'}
+                </div>
+              )}
+            </div>
+            {/* Online Status Indicator */}
+            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 border-2 border-white rounded-full flex items-center justify-center animate-pulse-slow">
+              <div className="w-2 h-2 bg-white rounded-full"></div>
+            </div>
+          </div>
+
+          {/* Header Text */}
+          <div className="text-left">
+            <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-violet-400 flex items-center gap-3">
+              <LayoutDashboard className="w-10 h-10 text-purple-400" /> Teacher Dashboard
+            </h1>
+            <p className="text-gray-400 mt-2 text-lg">
+              Welcome back, <span className="font-semibold text-purple-300">{currentUser?.firstName ? `${currentUser.firstName} ${currentUser.lastName || ''}` : 'Teacher'}!</span>
+            </p>
+            <p className="text-gray-500 text-sm">{currentUser?.email}</p>
+          </div>
         </div>
-        
+
         <div className="flex justify-center mt-4">
           <button
             onClick={() => {
               setToLocalStorage('currentUser', null); // Clear current user
+              localStorage.removeItem('token'); // Also remove the token
               navigate('/login');
             }}
             className="px-6 py-2 bg-white/60 backdrop-blur-sm text-slate-700 rounded-lg hover:bg-white/80 transition-colors duration-200 flex items-center gap-2 shadow-sm border border-white/40"
@@ -402,6 +440,15 @@ export default function TeacherDashboard() {
                 label="Total Earnings"
                 value={stats.totalEarnings.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}
               />
+              {/* Info message when no data */}
+              {stats.upcomingSessions === 0 && stats.newInquiries === 0 && stats.totalEarnings === 0 && (
+                <div className="mt-4 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-blue-700 text-xs font-medium flex items-center gap-1 whitespace-nowrap overflow-x-auto">
+                    <Info className="w-4 h-4 text-blue-400" />
+                    Data will update when you receive bookings and inquiries.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </DashboardCard>
@@ -419,7 +466,7 @@ export default function TeacherDashboard() {
               <li key={path}>
                 <button
                   onClick={() => navigate(path)}
-                  className="w-full flex items-center gap-4 p-4 bg-gray-700 text-gray-200 rounded-lg hover:bg-gray-600 hover:text-white transition-all duration-200 font-semibold shadow-md hover:shadow-xl transform hover:scale-[1.01]"
+                  className="w-full flex items-center gap-4 p-4 bg-gray-100 text-slate-800 rounded-lg hover:bg-gray-200 hover:text-purple-700 transition-all duration-200 font-semibold shadow-sm hover:shadow-md transform hover:scale-[1.01]"
                 >
                   <Icon className="w-6 h-6 text-purple-400" />
                   <span>{label}</span>
@@ -429,38 +476,21 @@ export default function TeacherDashboard() {
           </ul>
         </DashboardCard>
 
-        {/* Recent Bookings/Sessions (New Card) */}
+        {/* Recent Bookings/Sessions Card */}
+        {/* TODO: Implement GET /api/teacher/bookings/recent endpoint */}
         <DashboardCard icon={MonitorCheck} title="Recent Activity" className="md:col-span-2 xl:col-span-3">
           <h3 className="text-xl font-semibold text-gray-200 mb-4">Latest Bookings</h3>
           <div className="space-y-4 max-h-60 overflow-y-auto custom-scrollbar">
-            {/* Filter and map recent bookings for this teacher */}
-            {getFromLocalStorage('teacherBookings', [])
-              .filter(b => b.teacherId === currentUser.id)
-              .sort((a, b) => new Date(b.bookedAt) - new Date(a.bookedAt)) // Sort by most recent
-              .slice(0, 5) // Show up to 5 recent bookings
-              .map(booking => (
-                <div key={booking.id} className="bg-gray-700 p-4 rounded-lg flex items-center justify-between shadow-sm border border-gray-600">
-                  <div>
-                    <p className="text-lg font-semibold text-gray-100">{booking.subject} with {booking.studentName}</p>
-                    <p className="text-gray-400 text-sm flex items-center gap-2">
-                      <CalendarDays className="w-4 h-4" /> {booking.date} at {booking.time}
-                    </p>
-                  </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                    booking.status === 'confirmed' ? 'bg-emerald-500 text-white' :
-                    booking.status === 'pending' ? 'bg-amber-500 text-white' :
-                    'bg-red-500 text-white'
-                  }`}>
-                    {booking.status.toUpperCase()}
-                  </span>
-                </div>
-              ))}
-            {getFromLocalStorage('teacherBookings', []).filter(b => b.teacherId === currentUser.id).length === 0 && (
-              <p className="text-gray-400 text-center py-4">No recent bookings yet.</p>
-            )}
+            {/* TODO: Replace with actual booking data from backend */}
+            <div className="text-center py-8">
+              <MonitorCheck className="w-16 h-16 text-gray-500 mx-auto mb-4 opacity-50" />
+              <p className="text-gray-400 text-lg font-medium">No bookings yet</p>
+              <p className="text-gray-500 text-sm mt-2">
+                When students book sessions with you, they'll appear here.
+              </p>
+            </div>
           </div>
         </DashboardCard>
-
       </main>
 
       {/* Tailwind CSS Custom Scrollbar and Animation Definitions */}
@@ -469,15 +499,15 @@ export default function TeacherDashboard() {
           width: 8px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-          background: #333; /* Darker track for futuristic theme */
+          background: #333;
           border-radius: 10px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #8b5cf6; /* purple-500 */
+          background: #8b5cf6;
           border-radius: 10px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #a78bfa; /* purple-400 */
+          background: #a78bfa;
         }
 
         @keyframes fadeInDown {
@@ -500,6 +530,22 @@ export default function TeacherDashboard() {
         }
         .animate-fade-in {
           animation: fadeIn 0.3s ease-out forwards;
+        }
+
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+        }
+        .animate-pulse-slow {
+          animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-6px); }
+        }
+        .animate-float {
+          animation: float 3s ease-in-out infinite;
         }
       `}</style>
       </div>
