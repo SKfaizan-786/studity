@@ -27,6 +27,8 @@ import BookClass from "./pages/student/BookClass.jsx";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard.jsx";
 import TeacherProfileForm from "./pages/teacher/TeacherProfileForm.jsx";
 import TeacherProfile from "./pages/teacher/TeacherProfile.jsx";
+// NEW: Import the TeacherProfileEdit component
+import TeacherProfileEdit from "./pages/teacher/TeacherProfileEdit.jsx";
 import TeacherScheduleForm from "./pages/teacher/TeacherScheduleForm.jsx";
 import Bookings from "./pages/teacher/Bookings.jsx";
 
@@ -38,7 +40,7 @@ const USER_ROLES = {
 
 function App() {
   const location = useLocation();
-  
+
   // Define routes where navbar should NOT be shown
   const noNavbarRoutes = [
     '/login',
@@ -49,12 +51,14 @@ function App() {
     '/teacher/profile-setup',
     '/student/profile',
     '/teacher/profile',
+    // NEW: Add the edit profile route to the list
+    '/teacher/profile/edit',
     '/student/find-teachers',
     '/student/book-class',
     '/teacher/schedule',
     '/teacher/bookings'
   ];
-  
+
   // Check if current route should show navbar
   const shouldShowNavbar = !noNavbarRoutes.includes(location.pathname);
 
@@ -69,7 +73,7 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
-        
+
         {/* Student Routes */}
         {/* Student Profile Setup: Requires student role, profile MUST NOT be complete yet */}
         <Route
@@ -158,6 +162,15 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={[USER_ROLES.TEACHER]} profileCompleteRequired={true}>
               <TeacherProfile />
+            </ProtectedRoute>
+          }
+        />
+        {/* NEW: Teacher Profile Edit Route */}
+        <Route
+          path="/teacher/profile/edit"
+          element={
+            <ProtectedRoute allowedRoles={[USER_ROLES.TEACHER]} profileCompleteRequired={true}>
+              <TeacherProfileEdit />
             </ProtectedRoute>
           }
         />

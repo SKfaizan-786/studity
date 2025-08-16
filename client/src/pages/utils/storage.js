@@ -47,7 +47,7 @@ export const saveAuthToken = (token) => {
 export const getAuthToken = () => {
   const token = getFromLocalStorage('authToken');
   if (!token) return null;
-  
+
   // In a real app, you would decode the JWT and check expiration
   return token;
 };

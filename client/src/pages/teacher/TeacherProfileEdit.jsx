@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   User,
   GraduationCap,
   Save,
+  Home,
   ArrowLeft,
   Loader2
 } from 'lucide-react';
+import { getFromLocalStorage, setToLocalStorage } from '../utils/storage';
 
 const TeacherProfileEdit = () => {
   const navigate = useNavigate();
@@ -19,40 +21,22 @@ const TeacherProfileEdit = () => {
     bio: '',
     qualifications: '',
     experienceYears: '',
-    currentOccupation: '',
-    subjects: '',
-    boards: '',
-    classes: '',
+    currentOccupation: '', // Added missing field
+    subjects: [],
+    boards: [],
+    classes: [],
     teachingMode: '',
-    preferredSchedule: '',
-    teachingApproach: '',
-    hourlyRate: ''
+    preferredSchedule: '', // Added missing field
+    teachingApproach: '', // Added missing field
+    hourlyRate: '',
+    photoUrl: ''
   });
+  const [photoPreview, setPhotoPreview] = useState('');
+  const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
 
-  // Helper function to safely get data from localStorage
-  const getFromLocalStorage = (key) => {
-    try {
-      const value = localStorage.getItem(key);
-      return value ? JSON.parse(value) : null;
-    } catch (error) {
-      console.error("Failed to get from localStorage:", error);
-      return null;
-    }
-  };
-
-  // Helper function to safely set data to localStorage
-  const setToLocalStorage = (key, value) => {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch (error) {
-      console.error("Failed to set to localStorage:", error);
-    }
-  };
-
-  // Effect to load user data from local storage
   useEffect(() => {
     const user = getFromLocalStorage('currentUser');
     if (!user || user.role !== 'teacher') {
@@ -61,7 +45,6 @@ const TeacherProfileEdit = () => {
     }
     setCurrentUser(user);
 
-    // Populate form data with existing profile information
     const teacherData = user.teacherProfileData || user.teacherProfile || {};
     setFormData({
       firstName: teacherData.firstName || user.firstName || '',
@@ -72,82 +55,93 @@ const TeacherProfileEdit = () => {
       qualifications: teacherData.qualifications || '',
       experienceYears: teacherData.experienceYears || teacherData.experience || '',
       currentOccupation: teacherData.currentOccupation || '',
-      subjects: Array.isArray(teacherData.subjects) ? teacherData.subjects.join(', ') : '',
-      boards: Array.isArray(teacherData.boards) ? teacherData.boards.join(', ') : '',
-      classes: Array.isArray(teacherData.classes) ? teacherData.classes.join(', ') : '',
+      subjects: Array.isArray(teacherData.subjects) ? teacherData.subjects.map(s => s.text || s).join(', ') : '',
+      boards: Array.isArray(teacherData.boards) ? teacherData.boards.map(b => b.text || b).join(', ') : '',
+      classes: Array.isArray(teacherData.classes) ? teacherData.classes.map(c => c.text || c).join(', ') : '',
       teachingMode: teacherData.teachingMode || '',
       preferredSchedule: teacherData.preferredSchedule || '',
       teachingApproach: teacherData.teachingApproach || '',
-      hourlyRate: teacherData.hourlyRate || ''
+      hourlyRate: teacherData.hourlyRate || '',
+      photoUrl: teacherData.photoUrl || ''
     });
-
+    setPhotoPreview(teacherData.photoUrl || '');
     setLoading(false);
   }, [navigate]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    const { name, value, files } = e.target;
+    if (name === 'photo' && files && files[0]) {
+      const file = files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, photoUrl: reader.result }));
+        setPhotoPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     setIsSaving(true);
     setMessage({ text: '', type: '' });
 
-    const token = getFromLocalStorage('token');
-    if (!token) {
-      setMessage({ text: "Authentication token missing. Please log in again.", type: "error" });
-      setIsSaving(false);
-      return;
-    }
-
     try {
-      // Prepare the data to be sent to the backend
-      const profileToSave = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        phone: formData.phone,
-        location: formData.location,
-        bio: formData.bio,
-        qualifications: formData.qualifications,
-        experienceYears: formData.experienceYears,
-        currentOccupation: formData.currentOccupation,
-        teachingMode: formData.teachingMode,
-        preferredSchedule: formData.preferredSchedule,
-        teachingApproach: formData.teachingApproach,
-        hourlyRate: formData.hourlyRate,
-        // Convert comma-separated strings back into arrays
-        subjects: formData.subjects.split(',').map(s => s.trim()).filter(s => s),
-        boards: formData.boards.split(',').map(b => b.trim()).filter(b => b),
-        classes: formData.classes.split(',').map(c => c.trim()).filter(c => c),
+      // Prepare the data for the API
+      // Helper to map comma-separated string to array of {id, text}
+      const mapToObjArray = (str) => str.split(',').map((s, idx) => {
+        const text = s.trim();
+        return text ? { id: idx + 1, text } : null;
+      }).filter(Boolean);
+
+      const profileData = {
+        ...formData,
+        subjects: mapToObjArray(formData.subjects),
+        boards: mapToObjArray(formData.boards),
+        classes: mapToObjArray(formData.classes),
+        achievements: formData.achievements ? mapToObjArray(formData.achievements) : undefined,
+        experience: formData.experienceYears,
+        photoUrl: formData.photoUrl || ''
       };
 
-      // Make the API call to your backend server
+      // Get token
+      let token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      if (!token && currentUser && currentUser.token) token = currentUser.token;
+      if (!token) throw new Error('No authentication token found. Please log in again.');
+      token = token.replace(/^"|"$/g, '');
+
+      // Send PUT request to backend
       const response = await fetch('http://localhost:5000/api/profile/teacher', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(profileToSave),
+        body: JSON.stringify(profileData)
       });
 
-      const result = await response.json();
-
       if (!response.ok) {
-        throw new Error(result.message || 'Failed to update profile');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update profile');
       }
 
-      // Update local storage with the new user data from the backend
-      setToLocalStorage('currentUser', result.user);
-      setCurrentUser(result.user);
+      const result = await response.json();
+      // Update localStorage with new user data
+      const updatedUser = {
+        ...currentUser,
+        ...result.user,
+        teacherProfile: result.user.teacherProfile,
+        teacherProfileData: result.user.teacherProfile
+      };
+      setToLocalStorage('currentUser', updatedUser);
+      setCurrentUser(updatedUser);
 
       setMessage({ text: 'Profile updated successfully!', type: 'success' });
-      setTimeout(() => navigate('/teacher/profile'), 2000); // Redirect after a short delay
+      setTimeout(() => navigate('/teacher/profile'), 2000);
     } catch (error) {
-      console.error('Failed to save profile:', error);
-      setMessage({ text: 'Failed to save profile. ' + error.message, type: 'error' });
+      setMessage({ text: error.message || 'Failed to save profile. Please try again.', type: 'error' });
     } finally {
       setIsSaving(false);
     }
@@ -197,12 +191,13 @@ const TeacherProfileEdit = () => {
           <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
             <form onSubmit={handleSubmit} className="p-10">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                {/* Personal Information Section */}
-                <div>
-                  <h3 className="text-xl font-bold mb-5 text-blue-700 flex items-center gap-2">
+                {/* Left Column - Personal Information */}
+                <div className="space-y-6">
+                  <h3 className="text-xl font-bold text-blue-700 flex items-center gap-2">
                     <User className="w-6 h-6" /> Personal Information
                   </h3>
-                  <div className="space-y-5">
+                  
+                  <div className="space-y-4">
                     <div>
                       <label htmlFor="firstName" className="block text-sm font-semibold text-slate-700 mb-1">First Name</label>
                       <input
@@ -259,15 +254,41 @@ const TeacherProfileEdit = () => {
                         className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       ></textarea>
                     </div>
+                    
+                    {/* Profile Image Upload - Moved after Bio */}
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">Profile Image</label>
+                      <div className="flex items-center gap-4">
+                        {photoPreview ? (
+                          <img src={photoPreview} alt="Profile Preview" className="w-20 h-20 rounded-full object-cover border-2 border-blue-300 shadow-sm" />
+                        ) : (
+                          <div className="w-20 h-20 rounded-full bg-slate-200 flex items-center justify-center text-slate-400">
+                            <User className="w-8 h-8" />
+                          </div>
+                        )}
+                        <div>
+                          <input
+                            type="file"
+                            name="photo"
+                            accept="image/*"
+                            onChange={handleChange}
+                            ref={fileInputRef}
+                            className="block text-sm text-slate-500 file:mr-2 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                          />
+                          <p className="text-xs text-slate-500 mt-1">JPG, PNG or GIF (Max. 5MB)</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Teaching Information Section */}
-                <div>
-                  <h3 className="text-xl font-bold mb-5 text-purple-700 flex items-center gap-2">
+                {/* Right Column - Teaching Information */}
+                <div className="space-y-6">
+                  <h3 className="text-xl font-bold text-purple-700 flex items-center gap-2">
                     <GraduationCap className="w-6 h-6" /> Teaching Information
                   </h3>
-                  <div className="space-y-5">
+                  
+                  <div className="space-y-4">
                     <div>
                       <label htmlFor="qualifications" className="block text-sm font-semibold text-slate-700 mb-1">Qualifications</label>
                       <input
