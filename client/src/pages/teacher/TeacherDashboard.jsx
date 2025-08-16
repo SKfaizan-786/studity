@@ -457,11 +457,11 @@ export default function TeacherDashboard() {
         <DashboardCard icon={LayoutDashboard} title="Quick Actions">
           <ul className="space-y-3">
             {[
-              { label: 'Edit Profile', icon: UserRound, path: '/teacher/profile-setup' },
+              { label: 'View Profile', icon: UserRound, path: '/teacher/profile' },
               { label: 'Manage Schedule', icon: CalendarDays, path: '/teacher/schedule' },
               { label: 'View Bookings', icon: Users, path: '/teacher/bookings' },
               { label: 'Messages', icon: MessageSquare, path: '/teacher/messages' },
-              { label: 'My Achievements', icon: Award, path: '/teacher/achievements' },
+              { label: 'My Achievements', icon: Award, path: '/teacher/achievements' }
             ].map(({ label, icon: Icon, path }) => (
               <li key={path}>
                 <button

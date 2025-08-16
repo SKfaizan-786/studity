@@ -6,7 +6,11 @@
 export const setToLocalStorage = (key, value) => {
   try {
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem(key, JSON.stringify(value));
+      if (key === 'token') {
+        window.localStorage.setItem(key, value); // Store token as plain string
+      } else {
+        window.localStorage.setItem(key, JSON.stringify(value));
+      }
     }
   } catch (error) {
     console.error('Error saving to localStorage:', error);
@@ -18,6 +22,9 @@ export const getFromLocalStorage = (key, defaultValue = null) => {
   try {
     if (typeof window !== 'undefined') {
       const item = window.localStorage.getItem(key);
+      if (key === 'token') {
+        return item || defaultValue; // Return as plain string
+      }
       return item ? JSON.parse(item) : defaultValue;
     }
     return defaultValue;

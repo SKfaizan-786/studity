@@ -1,15 +1,23 @@
 import express from 'express';
+
 import {
   updateTeacherProfile,
   getTeacherProfile,
   updateStudentProfile,
   getStudentProfile,
-  updateTeacherListingStatus
+  updateTeacherListingStatus,
+  getFavourites,
+  addFavourite,
+  removeFavourite
 } from '../controllers/profile-controller';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { requireRole } from '../middleware/roleCheck';
 
 const router = express.Router();
+// Favourites routes
+router.get('/favourites', authMiddleware, getFavourites);
+router.post('/favourites', authMiddleware, addFavourite);
+router.delete('/favourites', authMiddleware, removeFavourite);
 
 // Teacher routes
 router.get('/teacher', authMiddleware, requireRole('teacher'), getTeacherProfile);
