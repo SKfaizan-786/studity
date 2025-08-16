@@ -454,62 +454,55 @@ const StudentDashboard = () => {
     }
   };
 
-  // Update the useEffect to call fetchTeachers
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const currentUser = getFromLocalStorage('currentUser');
-        if (!currentUser || currentUser.role !== 'student') {
+        const token = localStorage.getItem('token');
+        if (!token) {
           navigate('/login');
           return;
         }
 
-        // Check if profile is complete
-        if (!currentUser.profileComplete) {
-          navigate('/student/profile');
-          return;
-        }
+        const cleanToken = token.replace(/^"(.*)"$/, '$1');
+        let userForDashboard = null;
 
-        // Try to fetch fresh data from backend if token exists
-        const token = localStorage.getItem('token');
-        if (token) {
-          try {
-            const cleanToken = token.replace(/^"(.*)"$/, '$1');
-            const response = await fetch('http://localhost:5000/api/profile/student', {
-              method: 'GET',
-              headers: {
-                'Authorization': `Bearer ${cleanToken}`,
-                'Content-Type': 'application/json'
-              }
-            });
-
-            if (response.ok) {
-              const profileData = await response.json();
-              if (!profileData.profileComplete) {
-                navigate('/student/profile');
-                return;
-              }
-              setCurrentUser(profileData);
-              setToLocalStorage('currentUser', profileData);
+        // First try to fetch fresh data from backend
+        try {
+          const response = await fetch('http://localhost:5000/api/profile/student', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${cleanToken}`,
+              'Content-Type': 'application/json'
             }
-          } catch (error) {
-            console.warn('Failed to fetch from backend, using localStorage:', error);
-            // Fallback to localStorage
-            if (!currentUser.profileComplete) {
+          });
+
+          if (response.ok) {
+            const profileData = await response.json();
+            console.log('Fetched profile data:', profileData);
+            // Only redirect if profileComplete is false
+            if (!profileData.profileComplete) {
               navigate('/student/profile');
               return;
             }
+            setCurrentUser(profileData);
+            setToLocalStorage('currentUser', profileData);
+            userForDashboard = profileData;
+          } else {
+            throw new Error('Failed to fetch profile');
           }
-        } else {
-          // No token, use localStorage
-          if (!currentUser.profileComplete) {
+        } catch (error) {
+          console.warn('Failed to fetch from backend, checking localStorage:', error);
+          // Fallback to localStorage
+          const currentUser = getFromLocalStorage('currentUser');
+          if (!currentUser || !currentUser.profileComplete) {
             navigate('/student/profile');
             return;
           }
+          setCurrentUser(currentUser);
+          userForDashboard = currentUser;
         }
 
-        setCurrentUser(currentUser);
-        setDashboardData(getSampleStudentData(currentUser.firstName));
+        setDashboardData(getSampleStudentData(userForDashboard.firstName));
         await fetchTeachers();
       } catch (error) {
         console.error('Error loading dashboard:', error);

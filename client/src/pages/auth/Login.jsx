@@ -21,7 +21,7 @@ import {
 
 // --- IMPORT THE STORAGE UTILITIES ---
 // Corrected path: storage.js is in client/src/utils/
-import { setToLocalStorage, getFromLocalStorage } from "../utils/storage";
+import { setToLocalStorage, getFromLocalStorage } from "../../utils/storage";
 
 // Define constants for roles to avoid magic strings
 const USER_ROLES = {
@@ -195,39 +195,48 @@ const Login = () => {
       setUiState((u) => ({ ...u, isSubmitting: true, errorMessage: "" }));
 
       try {
-        const { data } = await axios.post(
-          "http://localhost:5000/api/auth/login",
-          {
-            email: formData.email,
-            password: formData.password,
+        const response = await fetch('http://localhost:5000/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ email: formData.email, password: formData.password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // Save token and user data
+          setToLocalStorage('token', data.token);
+          setToLocalStorage('currentUser', data.user);
+          setToLocalStorage('lastLoginTime', new Date());
+
+          // Navigate based on profile completion
+          if (data.user.role === 'student') {
+            if (data.user.profileComplete) {
+              navigate('/student/dashboard');
+            } else {
+              navigate('/student/profile');
+            }
+          } else if (data.user.role === 'teacher') {
+            if (data.user.profileComplete) {
+              navigate('/teacher/dashboard');
+            } else {
+              navigate('/teacher/profile');
+            }
+          } else {
+            navigate('/');
           }
-        );
 
-        console.log("Login success: ", data);
-
-        setToLocalStorage("currentUser", data); // Save entire response object (contains token, etc.)
-        setToLocalStorage("lastLoginTime", new Date());
-
-        let redirectPath;
-        if (data.role === USER_ROLES.STUDENT) {
-          redirectPath = data.profileComplete
-            ? "/student/dashboard"
-            : "/student/profile-setup";
-        } else if (data.role === USER_ROLES.TEACHER) {
-          redirectPath = data.profileComplete
-            ? "/teacher/dashboard"
-            : "/teacher/profile-setup";
+          // Reset form
+          setFormData({ email: '', password: '', rememberMe: false });
         } else {
-          redirectPath = "/";
+          const message = data.message || 'Login failed. Please try again.';
+          throw new Error(message);
         }
-
-        // Reset form
-        setFormData({ email: "", password: "", rememberMe: false });
-        navigate(redirectPath);
       } catch (error) {
-        const message =
-          error.response?.data?.message || "Login failed. Please try again.";
-        console.error("Login error:", message);
+        const message = error.message || 'Login failed. Please try again.';
+        console.error('Login error:', message);
 
         setUiState((u) => {
           const newAttempts = u.loginAttempts + 1;
@@ -246,7 +255,7 @@ const Login = () => {
               isSubmitting: false,
               loginAttempts: newAttempts,
               errorMessage:
-                message + (newAttempts === 2 ? " 1 attempt remaining." : ""),
+                message + (newAttempts === 2 ? ' 1 attempt remaining.' : ''),
             };
           }
         });
@@ -351,12 +360,22 @@ const Login = () => {
       setToLocalStorage("token", token);
       setToLocalStorage("lastLoginTime", new Date());
 
-      // Redirect based on role and profile completion
-      const redirectPath = user.profileComplete
-        ? `/${user.role}/dashboard`
-        : `/${user.role}/profile-setup`;
-
-      navigate(redirectPath);
+      // Redirect based on role and profile completion (match normal login)
+      if (user.role === 'student') {
+        if (user.profileComplete) {
+          navigate('/student/dashboard');
+        } else {
+          navigate('/student/profile');
+        }
+      } else if (user.role === 'teacher') {
+        if (user.profileComplete) {
+          navigate('/teacher/dashboard');
+        } else {
+          navigate('/teacher/profile');
+        }
+      } else {
+        navigate('/');
+      }
     } catch (error) {
       setUiState((u) => ({
         ...u,

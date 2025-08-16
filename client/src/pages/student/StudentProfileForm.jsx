@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 
 // --- IMPORT THE STORAGE UTILITIES ---
-import { setToLocalStorage, getFromLocalStorage } from '../utils/storage';
+import { setToLocalStorage, getFromLocalStorage } from '../../utils/storage';
 
 const StudentProfileForm = () => {
   const navigate = useNavigate();
@@ -84,34 +84,87 @@ const StudentProfileForm = () => {
 
   // Effect to load user data from localStorage on component mount
   useEffect(() => {
-    // --- REPLACED localStorage.getItem with getFromLocalStorage ---
-    const storedUser = getFromLocalStorage('currentUser', null);
-    if (storedUser && storedUser.role === 'student') {
-      const studentProfileData = storedUser.studentProfileData || {};
+    const loadUserData = async () => {
+      const storedUser = getFromLocalStorage('currentUser', null);
+      if (storedUser && storedUser.role === 'student') {
+        try {
+          const token = localStorage.getItem('token');
+          if (token) {
+            const cleanToken = token.replace(/^"(.*)"$/, '$1');
+            const response = await fetch('http://localhost:5000/api/profile/student', {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${cleanToken}`,
+                'Content-Type': 'application/json'
+              }
+            });
+
+            if (response.ok) {
+              const profileData = await response.json();
+              const studentProfile = profileData.studentProfile || {};
+
+              setFormData(prev => ({
+                ...prev,
+                firstName: profileData.firstName || storedUser.firstName || '',
+                lastName: profileData.lastName || storedUser.lastName || '',
+                email: profileData.email || storedUser.email || '',
+                phone: studentProfile.phone || '',
+                location: studentProfile.location || '',
+                learningInterest: (studentProfile.subjects && studentProfile.subjects[0]) || '',
+                mode: studentProfile.mode || '',
+                board: studentProfile.board || '',
+                subject: studentProfile.grade || '',
+                bio: studentProfile.bio || '',
+                goals: (studentProfile.learningGoals ? studentProfile.learningGoals.map((g, i) => ({ id: i + 1, text: g })) : []),
+              }));
+
+              if (studentProfile.photoUrl) {
+                setUiState(prev => ({
+                  ...prev,
+                  photoPreviewUrl: studentProfile.photoUrl
+                }));
+              }
+            } else {
+              loadFromLocalStorage(storedUser);
+            }
+          } else {
+            loadFromLocalStorage(storedUser);
+          }
+        } catch (error) {
+          console.warn('Failed to fetch from backend, using localStorage:', error);
+          loadFromLocalStorage(storedUser);
+        }
+      }
+      setUiState(prev => ({ ...prev, userLoaded: true }));
+    };
+
+    const loadFromLocalStorage = (storedUser) => {
+      const studentProfile = storedUser.studentProfile || {};
 
       setFormData(prev => ({
         ...prev,
         firstName: storedUser.firstName || '',
         lastName: storedUser.lastName || '',
         email: storedUser.email || '',
-        phone: studentProfileData.phone || '',
-        learningInterest: studentProfileData.learningInterest || '',
-        location: studentProfileData.location || '',
-        mode: studentProfileData.mode || '',
-        board: studentProfileData.board || '',
-        subject: studentProfileData.subject || '',
-        bio: studentProfileData.bio || '',
-        goals: studentProfileData.goals || [],
+        phone: studentProfile.phone || '',
+        location: studentProfile.location || '',
+        learningInterest: (studentProfile.subjects && studentProfile.subjects[0]) || '',
+        mode: studentProfile.mode || '',
+        board: studentProfile.board || '',
+        subject: studentProfile.grade || '',
+        bio: studentProfile.bio || '',
+        goals: (studentProfile.learningGoals ? studentProfile.learningGoals.map((g, i) => ({ id: i + 1, text: g })) : []),
       }));
 
-      if (studentProfileData.photoPreviewUrl) {
+      if (studentProfile.photoUrl) {
         setUiState(prev => ({
           ...prev,
-          photoPreviewUrl: studentProfileData.photoPreviewUrl
+          photoPreviewUrl: studentProfile.photoUrl
         }));
       }
-    }
-    setUiState(prev => ({ ...prev, userLoaded: true }));
+    };
+
+    loadUserData();
   }, []);
 
   // Add this useEffect to load existing profile data around line 100
@@ -323,83 +376,67 @@ const StudentProfileForm = () => {
   }, []);
 
   const handleSubmit = useCallback(async () => {
-    console.log('Submitting:', formData);
+    console.log('Submitting profile data...');
     setUiState(prev => ({ ...prev, isSubmitting: true }));
 
     try {
-      const token = localStorage.getItem('token');
-      if (token) {
-        const cleanToken = token.replace(/^"(.*)"$/, '$1');
-        
-        const profileData = {
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          studentProfile: {
-            phone: formData.phone,
-            location: formData.location,
-            grade: formData.subject, // Using subject as grade
-            subjects: [formData.learningInterest], // Using learning interest as subjects
-            learningGoals: formData.goals.map(g => g.text), // Convert goals to string array
-            bio: formData.bio,
-            photoUrl: uiState.photoPreviewUrl
-          }
-        };
+      // Get token from localStorage correctly
+      const token = getFromLocalStorage('token');
+      if (!token) throw new Error('No authentication token found');
 
-        const response = await fetch('http://localhost:5000/api/profile/student', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${cleanToken}`
-          },
-          body: JSON.stringify(profileData)
-        });
+      // Prepare all fields for backend
+      const profileData = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone,
+        location: formData.location,
+        subject: formData.subject,
+        learningInterest: formData.learningInterest,
+        learningGoals: formData.goals.map(g => g.text),
+        bio: formData.bio,
+        photoUrl: uiState.photoPreviewUrl,
+        mode: formData.mode,
+        board: formData.board,
+        subjects: formData.subjects || (formData.learningInterest ? [formData.learningInterest] : []),
+        // Do NOT send 'goals' field, only 'learningGoals'
+      };
 
-        if (response.ok) {
-          const result = await response.json();
-          const updatedUser = {
-            ...getFromLocalStorage('currentUser'),
-            ...result.user,
-            profileComplete: true
-          };
-          
-          setToLocalStorage('currentUser', updatedUser);
-          
-          showMessage('Student profile saved successfully! 🎉', 'success');
-          setTimeout(() => navigate('/student/dashboard'), 1500);
-          return;
-        }
+      console.log('Sending profile data:', profileData);
+
+      const response = await fetch('http://localhost:5000/api/profile/student', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(profileData)
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to save profile');
       }
 
-      // Fallback to localStorage save if backend fails
-      const currentUser = getFromLocalStorage('currentUser');
-      if (currentUser) {
-        const updatedUser = {
-          ...currentUser,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          profileComplete: true,
-          studentProfile: {
-            phone: formData.phone,
-            location: formData.location,
-            grade: formData.subject,
-            subjects: [formData.learningInterest],
-            learningGoals: formData.goals.map(g => g.text),
-            bio: formData.bio,
-            photoUrl: uiState.photoPreviewUrl
-          }
-        };
+      console.log('Profile update response:', result);
 
-        setToLocalStorage('currentUser', updatedUser);
-        showMessage('Student profile submitted successfully! 🎉', 'success');
-        setTimeout(() => navigate('/student/dashboard'), 1500);
-      }
+      // Update local storage with complete user data
+      const updatedUser = {
+        ...result.user,
+        profileComplete: true
+      };
+      setToLocalStorage('currentUser', updatedUser);
+
+      showMessage('Profile saved successfully!', 'success');
+      setTimeout(() => navigate('/student/dashboard'), 1500);
+
     } catch (error) {
-      console.error('Error submitting profile:', error);
-      showMessage('Error submitting profile. Please try again.', 'error');
+      console.error('Profile submission error:', error);
+      showMessage(error.message || 'Failed to save profile', 'error');
     } finally {
       setUiState(prev => ({ ...prev, isSubmitting: false }));
     }
-  }, [formData, uiState.errors, uiState.photoPreviewUrl, validateField, navigate, showMessage, steps, stepRequiredFields]);
+  }, [formData, uiState.photoPreviewUrl, navigate, showMessage]);
 
 
   const handleNextStep = useCallback(() => {

@@ -50,9 +50,24 @@ mongoose.connect(process.env.MONGO_URI as string)
   .then(() => console.log('✅ Connected to MongoDB'))
   .catch((err) => console.error('❌ MongoDB connection error:', err));
 
+// MongoDB connection status logging
+mongoose.connection.on('connected', () => {
+  console.log('MongoDB connected successfully');
+});
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB connection error:', err);
+});
+
 console.log("RESEND_API_KEY:", process.env.RESEND_API_KEY);
 
 // Routes
+// Debug logging middleware (TEMPORARY)
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  console.log('Headers:', req.headers);
+  if (req.body) console.log('Body:', req.body);
+  next();
+});
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/bookings', bookingRoutes);

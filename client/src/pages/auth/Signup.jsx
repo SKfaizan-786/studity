@@ -266,7 +266,14 @@ const Signup = () => {
         setToLocalStorage("currentUser", data.user);
       }
 
-      navigate("/login");
+      // Redirect to profile setup page based on role
+      if (formData.role === "student") {
+        navigate("/student/profile-setup");
+      } else if (formData.role === "teacher") {
+        navigate("/teacher/profile-setup");
+      } else {
+        navigate("/login");
+      }
     } catch (error) {
       console.error("Signup submission error:", error);
       setUi((prev) => ({

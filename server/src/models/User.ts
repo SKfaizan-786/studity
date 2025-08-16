@@ -182,6 +182,8 @@ const UserSchema = new Schema<IUser>(
       learningGoals: [String],
       bio: String,
       photoUrl: String,
+      mode: String,
+      board: String,
     },
     teacherProfile: TeacherProfileSchema,
   },
