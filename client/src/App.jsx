@@ -1,9 +1,11 @@
 import { Routes, Route, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 // Shared Components
 // Paths are relative to the App.jsx file itself, assuming it's in the 'src' directory.
 import Navbar from "./components/Navbar.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import { SocketProvider } from "./contexts/SocketContext.jsx";
 
 // Utility Pages
 import Landing from "./pages/utils/Landing.jsx";
@@ -22,6 +24,7 @@ import StudentProfileForm from "./pages/student/StudentProfileForm.jsx";
 import StudentProfile from "./pages/student/StudentProfile.jsx";
 import TeacherList from "./pages/student/TeacherList.jsx";
 import BookClass from "./pages/student/BookClass.jsx";
+import StudentMessages from "./pages/student/Messages.jsx";
 
 // Teacher Pages
 import TeacherDashboard from "./pages/teacher/TeacherDashboard.jsx";
@@ -29,6 +32,7 @@ import TeacherProfileForm from "./pages/teacher/TeacherProfileForm.jsx";
 import TeacherProfile from "./pages/teacher/TeacherProfile.jsx";
 import TeacherScheduleForm from "./pages/teacher/TeacherScheduleForm.jsx";
 import Bookings from "./pages/teacher/Bookings.jsx";
+import TeacherMessages from "./pages/teacher/Messages.jsx";
 
 // Define constants for roles (consistent across Login.jsx and ProtectedRoute.jsx)
 const USER_ROLES = {
@@ -38,6 +42,21 @@ const USER_ROLES = {
 
 function App() {
   const location = useLocation();
+  const [currentUser, setCurrentUser] = useState(null);
+  
+  // Get current user for socket connection
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('currentUser');
+    if (token && user) {
+      try {
+        const parsedUser = JSON.parse(user);
+        setCurrentUser(parsedUser);
+      } catch (error) {
+        console.error('Error parsing user from localStorage:', error);
+      }
+    }
+  }, []);
   
   // Define routes where navbar should NOT be shown
   const noNavbarRoutes = [
@@ -51,15 +70,17 @@ function App() {
     '/teacher/profile',
     '/student/find-teachers',
     '/student/book-class',
+    '/student/messages',
     '/teacher/schedule',
-    '/teacher/bookings'
+    '/teacher/bookings',
+    '/teacher/messages'
   ];
   
   // Check if current route should show navbar
   const shouldShowNavbar = !noNavbarRoutes.includes(location.pathname);
 
   return (
-    <>
+    <SocketProvider userId={currentUser?._id}>
       {shouldShowNavbar && <Navbar />}
       <Routes>
         {/* Public Routes */}
@@ -103,6 +124,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={[USER_ROLES.STUDENT]} profileCompleteRequired={true}>
               <BookClass />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/student/messages"
+          element={
+            <ProtectedRoute allowedRoles={[USER_ROLES.STUDENT]} profileCompleteRequired={true}>
+              <StudentMessages />
             </ProtectedRoute>
           }
         />
@@ -152,6 +181,14 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/teacher/messages"
+          element={
+            <ProtectedRoute allowedRoles={[USER_ROLES.TEACHER]} profileCompleteRequired={true}>
+              <TeacherMessages />
+            </ProtectedRoute>
+          }
+        />
         {/* Teacher Profile View: Redirect to profile setup */}
         <Route
           path="/teacher/profile"
@@ -165,7 +202,7 @@ function App() {
         {/* Catch-all for undefined routes */}
         <Route path="*" element={<NotFound />} />
       </Routes>
-    </>
+    </SocketProvider>
   );
 }
 

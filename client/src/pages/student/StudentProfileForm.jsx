@@ -466,8 +466,8 @@ const StudentProfileForm = () => {
   const renderInputField = useCallback((label, name, type = 'text', icon, placeholder, isRequired = false, isTextArea = false) => {
     const value = formData[name];
     const error = uiState.errors[name];
-    const inputClasses = `w-full p-4 border rounded-xl transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/70 backdrop-blur-sm text-slate-900 placeholder-slate-500 ${
-      error ? 'border-red-300 bg-red-50/70' : 'border-white/40 hover:border-blue-300'
+    const inputClasses = `w-full p-4 border rounded-xl transition-all duration-200 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 ${
+      error ? 'border-red-500 bg-red-50' : 'border-gray-300'
     } shadow-sm hover:shadow-md`;
 
     return (
@@ -504,8 +504,8 @@ const StudentProfileForm = () => {
   const renderSelectField = useCallback((label, name, icon, options, placeholder, isRequired = false) => {
     const value = formData[name];
     const error = uiState.errors[name];
-    const selectClasses = `w-full p-4 border rounded-xl transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/70 backdrop-blur-sm text-slate-900 ${
-      error ? 'border-red-300 bg-red-50/70' : 'border-white/40 hover:border-blue-300'
+    const selectClasses = `w-full p-4 border rounded-xl transition-all duration-200 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 ${
+      error ? 'border-red-500 bg-red-50' : 'border-gray-300'
     } shadow-sm hover:shadow-md`;
 
     return (
@@ -545,30 +545,19 @@ const StudentProfileForm = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 relative overflow-hidden">
-      {/* Background decorative elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-10 left-10 w-72 h-72 bg-blue-400/20 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float"></div>
-        <div className="absolute top-40 right-10 w-72 h-72 bg-purple-400/20 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float-delayed"></div>
-        <div className="absolute -bottom-8 left-20 w-72 h-72 bg-indigo-400/20 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-float-slow"></div>
-      </div>
-
-      <div className="relative z-10 p-4 sm:p-6 lg:p-8">
-        <div className="max-w-6xl mx-auto">
-          {/* Header with progress */}
-          <div className="bg-white/60 backdrop-blur-xl border border-white/20 rounded-2xl p-8 mb-8 shadow-xl">
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl mb-4 shadow-lg">
-                <UserCircle2 className="w-8 h-8 text-white" />
-              </div>
-              <h1 className="text-4xl font-bold text-slate-900 mb-2">Complete Your Profile</h1>
-              <p className="text-slate-600 text-lg">Help us personalize your learning experience</p>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-4xl mx-auto">
+        {/* Header with progress */}
+        <div className="bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-3xl p-8 mb-8 relative overflow-hidden shadow-xl">
+          <div className="absolute inset-0 bg-black/10 backdrop-blur-sm"></div>
+          <div className="relative z-10">
+            <h1 className="text-4xl font-bold mb-2">Student Profile</h1>
+            <p className="text-violet-100 mb-4">Tell us about yourself to get personalized learning recommendations</p>
 
             {/* Progress bar */}
-            <div className="w-full bg-slate-200/60 rounded-full h-3 mb-6">
+            <div className="w-full bg-white/20 rounded-full h-3 mb-4">
               <div
-                className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-full h-3 transition-all duration-500 ease-out shadow-sm"
+                className="bg-white rounded-full h-3 transition-all duration-500 ease-out"
                 style={{ width: `${progress}%` }}
               ></div>
             </div>
@@ -577,14 +566,12 @@ const StudentProfileForm = () => {
             <div className="flex justify-between">
               {steps.map((step, index) => (
                 <div key={index} className="flex flex-col items-center flex-1">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-sm font-bold transition-all duration-300 ${
-                    index <= uiState.currentStep 
-                      ? 'bg-gradient-to-br from-blue-600 to-purple-600 text-white shadow-lg scale-105' 
-                      : 'bg-white/60 backdrop-blur-sm text-slate-400 border border-white/40'
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 transform scale-90 ${
+                    index <= uiState.currentStep ? 'bg-white text-violet-600 shadow-md scale-100' : 'bg-white/20 text-white/60'
                   }`}>
                     {index < uiState.currentStep ? <Check className="w-5 h-5" /> : <step.icon className="w-5 h-5" />}
                   </div>
-                  <span className="mt-2 text-sm text-slate-700 text-center font-medium">{step.title}</span>
+                  <span className="mt-2 text-xs sm:text-sm text-center">{step.title}</span>
                 </div>
               ))}
             </div>
@@ -608,38 +595,30 @@ const StudentProfileForm = () => {
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Main Form */}
           <div className="lg:col-span-2">
-            <div className="bg-white/60 backdrop-blur-xl border border-white/20 rounded-2xl p-8 shadow-xl">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-slate-900 mb-2 flex items-center space-x-2">
-                  {React.createElement(steps[uiState.currentStep].icon, { className: "w-6 h-6 text-blue-600" })}
-                  <span>{steps[uiState.currentStep].title}</span>
-                </h2>
-                <p className="text-slate-600">Step {uiState.currentStep + 1} of {steps.length}</p>
-              </div>
-              
+            <div className="bg-white shadow-2xl rounded-3xl p-8 transform transition-all duration-300 hover:shadow-3xl">
               <div className="space-y-6">
                 {/* Personal Info (Read-only from login) */}
-                <div className="bg-gradient-to-r from-blue-50/80 to-purple-50/80 backdrop-blur-sm p-6 rounded-xl border border-white/40 shadow-sm">
-                  <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                    <UserCircle2 className="w-5 h-5 text-blue-600" /> Account Details
+                <div className="bg-violet-50 p-4 rounded-xl shadow-inner border border-violet-200">
+                  <h3 className="font-semibold text-violet-700 mb-3 flex items-center gap-2">
+                    <UserCircle2 className="w-5 h-5" /> Account Details
                   </h3>
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">First Name</label>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">First Name</label>
                       <input
                         type="text"
                         value={formData.firstName}
                         disabled
-                        className="w-full p-3 border border-slate-200 rounded-lg bg-white/50 backdrop-blur-sm cursor-not-allowed text-slate-600 focus:outline-none"
+                        className="w-full p-3 border rounded-lg bg-gray-100 cursor-not-allowed text-gray-700"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">Last Name</label>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Last Name</label>
                       <input
                         type="text"
                         value={formData.lastName}
                         disabled
-                        className="w-full p-3 border border-slate-200 rounded-lg bg-white/50 backdrop-blur-sm cursor-not-allowed text-slate-600 focus:outline-none"
+                        className="w-full p-3 border rounded-lg bg-gray-100 cursor-not-allowed text-gray-700"
                       />
                     </div>
                     <div className="md:col-span-2">
@@ -658,8 +637,8 @@ const StudentProfileForm = () => {
                 {uiState.currentStep === 0 && (
                   <div className="space-y-6 animate-fade-in">
                     <h3 className="font-semibold text-gray-800 text-lg">Contact & Location</h3>
-                    {renderInputField('Phone Number', 'phone', 'tel', <Phone className="w-4 h-4" />, 'e.g., +91 98765 43210', false)} {/* Phone is now optional */}
-                    {renderInputField('Location', 'location', 'text', <MapPin className="w-4 h-4" />, 'e.g., Kolkata, West Bengal', true)}
+                    {renderInputField('Phone Number', 'phone', 'tel', <Phone className="w-4 h-4 text-violet-600" />, 'e.g., +91 98765 43210', false)} {/* Phone is now optional */}
+                    {renderInputField('Location', 'location', 'text', <MapPin className="w-4 h-4 text-violet-600" />, 'e.g., Kolkata, West Bengal', true)}
                   </div>
                 )}
 
@@ -667,7 +646,7 @@ const StudentProfileForm = () => {
                 {uiState.currentStep === 1 && (
                   <div className="space-y-6 animate-fade-in">
                     <h3 className="font-semibold text-gray-800 text-lg">Your Learning Preferences</h3>
-                    {renderInputField('What do you want to learn?', 'learningInterest', 'text', <BookOpenCheck className="w-4 h-4" />, 'e.g., Class 10 Mathematics, Python Programming', true)}
+                    {renderInputField('What do you want to learn?', 'learningInterest', 'text', <BookOpenCheck className="w-4 h-4 text-violet-600" />, 'e.g., Class 10 Mathematics, Python Programming', true)}
                     {renderSelectField(
                       'Preferred Learning Mode',
                       'mode',
@@ -682,8 +661,8 @@ const StudentProfileForm = () => {
                       true
                     )}
                     <div className="grid md:grid-cols-2 gap-6">
-                      {renderInputField('Board/University', 'board', 'text', <School className="w-4 h-4" />, 'e.g., CBSE, ICSE, State Board', true)}
-                      {renderInputField('Class/Course', 'subject', 'text', <GraduationCap className="w-4 h-4" />, 'e.g., Class 12, B.Tech CSE', true)}
+                      {renderInputField('Board/University', 'board', 'text', <School className="w-4 h-4 text-violet-600" />, 'e.g., CBSE, ICSE, State Board', true)}
+                      {renderInputField('Class/Course', 'subject', 'text', <GraduationCap className="w-4 h-4 text-violet-600" />, 'e.g., Class 12, B.Tech CSE', true)}
                     </div>
                   </div>
                 )}
@@ -692,7 +671,7 @@ const StudentProfileForm = () => {
                 {uiState.currentStep === 2 && (
                   <div className="space-y-6 animate-fade-in">
                     <h3 className="font-semibold text-gray-800 text-lg">More About You</h3>
-                    {renderInputField('Tell us about yourself', 'bio', 'text', <Edit3 className="w-4 h-4" />, 'Share your interests, hobbies, or anything you\'d like your tutor to know...', false, true)}
+                    {renderInputField('Tell us about yourself', 'bio', 'text', <Edit3 className="w-4 h-4 text-violet-600" />, 'Share your interests, hobbies, or anything you\'d like your tutor to know...', false, true)}
 
                     <div>
                       <label className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
@@ -865,66 +844,15 @@ const StudentProfileForm = () => {
             </div>
 
             {/* Tips Card */}
-            <div className="bg-white/60 backdrop-blur-xl border border-white/20 rounded-2xl p-6 shadow-xl">
-              <div className="text-center mb-6">
-                <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl mb-3 shadow-lg">
-                  <span className="text-2xl">💡</span>
-                </div>
-                <h3 className="text-xl font-bold text-slate-900">Tips for a Great Profile</h3>
-                <p className="text-slate-600 text-sm mt-1">Maximize your learning potential</p>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="flex items-start space-x-3 p-3 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 rounded-lg border border-white/40">
-                  <div className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
-                    <span className="text-blue-600 text-xs font-bold">1</span>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-slate-800 text-sm">Be Specific</p>
-                    <p className="text-slate-600 text-xs mt-1">The more details you provide about your learning interests and goals, the better we can match you with the right tutors.</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start space-x-3 p-3 bg-gradient-to-r from-green-50/50 to-emerald-50/50 rounded-lg border border-white/40">
-                  <div className="flex-shrink-0 w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mt-0.5">
-                    <span className="text-green-600 text-xs font-bold">2</span>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-slate-800 text-sm">Complete All Steps</p>
-                    <p className="text-slate-600 text-xs mt-1">Ensure you fill out all required fields to unlock the full potential of personalized recommendations.</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start space-x-3 p-3 bg-gradient-to-r from-purple-50/50 to-violet-50/50 rounded-lg border border-white/40">
-                  <div className="flex-shrink-0 w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center mt-0.5">
-                    <span className="text-purple-600 text-xs font-bold">3</span>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-slate-800 text-sm">Add a Photo</p>
-                    <p className="text-slate-600 text-xs mt-1">A profile picture helps tutors recognize you and adds a personal touch.</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start space-x-3 p-3 bg-gradient-to-r from-orange-50/50 to-amber-50/50 rounded-lg border border-white/40">
-                  <div className="flex-shrink-0 w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center mt-0.5">
-                    <span className="text-orange-600 text-xs font-bold">4</span>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-slate-800 text-sm">Set Clear Goals</p>
-                    <p className="text-slate-600 text-xs mt-1">Defining your learning goals helps you stay motivated and guides your tutors effectively.</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start space-x-3 p-3 bg-gradient-to-r from-teal-50/50 to-cyan-50/50 rounded-lg border border-white/40">
-                  <div className="flex-shrink-0 w-6 h-6 bg-teal-100 rounded-full flex items-center justify-center mt-0.5">
-                    <span className="text-teal-600 text-xs font-bold">5</span>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-slate-800 text-sm">Keep it Updated</p>
-                    <p className="text-slate-600 text-xs mt-1">You can always come back and modify your profile as your learning journey evolves.</p>
-                  </div>
-                </div>
-              </div>
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 shadow-md">
+              <h3 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">💡 Tips for a Great Profile</h3>
+              <ul className="space-y-2 text-sm text-blue-700">
+                <li>**Be Specific:** The more details you provide about your learning interests and goals, the better we can match you with the right tutors.</li>
+                <li>**Complete All Steps:** Ensure you fill out all required fields to unlock the full potential of personalized recommendations.</li>
+                <li>**Add a Photo:** A profile picture helps tutors recognize you and adds a personal touch.</li>
+                <li>**Set Clear Goals:** Defining your learning goals helps you stay motivated and guides your tutors effectively.</li>
+                <li>**Keep it Updated:** You can always come back and modify your profile as your learning journey evolves.</li>
+              </ul>
             </div>
           </div>
         </div>

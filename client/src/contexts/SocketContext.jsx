@@ -1,0 +1,78 @@
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { io } from 'socket.io-client';
+
+const SocketContext = createContext({
+  socket: null,
+  isConnected: false,
+  onlineUsers: new Set()
+});
+
+export const useSocket = () => {
+  const context = useContext(SocketContext);
+  if (!context) {
+    throw new Error('useSocket must be used within a SocketProvider');
+  }
+  return context;
+};
+
+export const SocketProvider = ({ children, userId }) => {
+  const [socket, setSocket] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState(new Set());
+
+  useEffect(() => {
+    // Only connect if we have a userId (user is logged in)
+    if (userId) {
+      const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
+        withCredentials: true
+      });
+
+      setSocket(newSocket);
+
+      newSocket.on('connect', () => {
+        console.log('Connected to server');
+        setIsConnected(true);
+        // Authenticate the user with the server
+        newSocket.emit('authenticate', userId);
+      });
+
+      newSocket.on('disconnect', () => {
+        console.log('Disconnected from server');
+        setIsConnected(false);
+      });
+
+      newSocket.on('connect_error', (error) => {
+        console.error('Connection error:', error);
+        setIsConnected(false);
+      });
+
+      // Handle online users updates
+      newSocket.on('online_users', (users) => {
+        setOnlineUsers(new Set(users));
+      });
+
+      return () => {
+        newSocket.disconnect();
+      };
+    } else {
+      // Disconnect if no userId
+      if (socket) {
+        socket.disconnect();
+        setSocket(null);
+        setIsConnected(false);
+      }
+    }
+  }, [userId]);
+
+  const value = {
+    socket,
+    isConnected,
+    onlineUsers
+  };
+
+  return (
+    <SocketContext.Provider value={value}>
+      {children}
+    </SocketContext.Provider>
+  );
+};

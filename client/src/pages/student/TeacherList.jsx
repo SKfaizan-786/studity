@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Filter, Star, Clock, BookOpen, Award, ChevronDown, X, Check, Heart, MapPin, Calendar, DollarSign, Users, Zap, SlidersHorizontal, Loader2 } from "lucide-react";
+import { Search, Filter, Star, Clock, BookOpen, Award, ChevronDown, X, Check, Heart, MapPin, Calendar, DollarSign, Users, Zap, SlidersHorizontal, Loader2, MessageCircle } from "lucide-react";
 import API_CONFIG from '../../config/api';
 
 // Add this debug function before the main component
@@ -124,16 +124,6 @@ export default function EnhancedTeacherPlatform() {
         }
       }
 
-      // Check if user is logged in
-      if (!currentUser || !currentUser.role) {
-        console.log('❌ No current user found, redirecting to login');
-        setError('Please login to view teachers');
-        setTimeout(() => {
-          navigate('/login');
-        }, 2000);
-        return;
-      }
-
       // Use the API config instead of hardcoded URL
       const API_BASE_URL = API_CONFIG.BASE_URL;
       console.log('🌐 API Base URL:', API_BASE_URL);
@@ -221,15 +211,9 @@ export default function EnhancedTeacherPlatform() {
           console.error('❌ API Error:', response.status, errorText);
           
           if (response.status === 401) {
-            console.log('🔑 Token is invalid, removing and redirecting');
-            // Token is invalid, redirect to login
-            localStorage.removeItem('token');
-            localStorage.removeItem('currentUser');
-            setError('Your session has expired. Please login again.');
-            setTimeout(() => {
-              navigate('/login');
-            }, 2000);
-            return;
+            console.log('🔑 Token might be invalid, but keeping user logged in and using localStorage fallback');
+            // Don't immediately logout - just log the issue and fall back to localStorage
+            console.warn('API authentication failed, falling back to localStorage data');
           }
           
           throw new Error('API request failed');
@@ -403,6 +387,18 @@ export default function EnhancedTeacherPlatform() {
   const handleBook = (teacher) => {
     setSelectedTeacher(teacher);
     setShowBookingModal(true);
+  };
+
+  const handleMessage = (teacher) => {
+    // Navigate to messages page with the teacher's info
+    navigate('/student/messages', { 
+      state: { 
+        startConversation: true,
+        teacherId: teacher.id,
+        teacherName: teacher.name,
+        teacherAvatar: teacher.avatar
+      }
+    });
   };
 
   // Also update the submitBooking function to use correct API URL
@@ -871,13 +867,23 @@ export default function EnhancedTeacherPlatform() {
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => handleBook(teacher)}
-                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2 group"
-                    >
-                      <Calendar className="w-4 h-4 group-hover:animate-pulse" />
-                      <span>Book Session</span>
-                    </button>
+                    <div className="space-y-3">
+                      <button
+                        onClick={() => handleBook(teacher)}
+                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2 group"
+                      >
+                        <Calendar className="w-4 h-4 group-hover:animate-pulse" />
+                        <span>Book Session</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => handleMessage(teacher)}
+                        className="w-full bg-white/60 backdrop-blur-sm border border-blue-200 hover:bg-blue-50/60 text-blue-700 font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-2 group"
+                      >
+                        <MessageCircle className="w-4 h-4 group-hover:animate-pulse" />
+                        <span>Message</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -460,7 +460,7 @@ export default function TeacherDashboard() {
               { label: 'Edit Profile', icon: UserRound, path: '/teacher/profile-setup' },
               { label: 'Manage Schedule', icon: CalendarDays, path: '/teacher/schedule' },
               { label: 'View Bookings', icon: Users, path: '/teacher/bookings' },
-              { label: 'View Inquiries', icon: MessageSquare, path: '/teacher/inquiries' },
+              { label: 'Messages', icon: MessageSquare, path: '/teacher/messages' },
               { label: 'My Achievements', icon: Award, path: '/teacher/achievements' },
             ].map(({ label, icon: Icon, path }) => (
               <li key={path}>

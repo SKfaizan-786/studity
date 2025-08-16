@@ -6,10 +6,13 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import session from 'express-session';
 import passport from 'passport';
+import { Server as SocketIOServer } from 'socket.io';
+import { createServer } from 'http';
 import authRoutes from './routes/auth';
 import profileRoutes from './routes/profile';
 import bookingRoutes from './routes/bookings';
 import teacherRoutes from './routes/teachers';
+import messageRoutes from './routes/messages';
 
 // Initialize passport configuration
 // Change this line to the new file name
@@ -18,6 +21,15 @@ import './passport-config'; // ✅ CORRECT IMPORT
 dotenv.config();
 
 const app: Application = express();
+const server = createServer(app);
+const io = new SocketIOServer(server, {
+  cors: {
+    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 
 // Middleware
@@ -72,6 +84,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/teachers', teacherRoutes);
+app.use('/api/messages', messageRoutes);
 
 // Root Route
 app.get('/', (_req, res) => {
@@ -101,7 +114,103 @@ app.get('/test-db-connection', async (_req, res) => {
   }
 });
 
+// Socket.io connection handling
+const connectedUsers = new Map<string, string>(); // userId -> socketId
+
+io.on('connection', (socket) => {
+  console.log('User connected:', socket.id);
+
+  // Handle user authentication
+  socket.on('authenticate', (userId: string) => {
+    connectedUsers.set(userId, socket.id);
+    socket.join(`user_${userId}`);
+    console.log(`User ${userId} authenticated with socket ${socket.id}`);
+  });
+
+  // Handle joining chat rooms
+  socket.on('join_room', (roomId: string) => {
+    socket.join(roomId);
+    console.log(`Socket ${socket.id} joined room ${roomId}`);
+  });
+
+  // Handle sending messages
+  socket.on('send_message', async (data: {
+    sender: string;
+    recipient: string;
+    content: string;
+    messageType?: string;
+    booking?: string;
+  }) => {
+    try {
+      // Import Message model dynamically to avoid circular dependencies
+      const Message = (await import('./models/Message')).default;
+      
+      // Create new message
+      const newMessage = new Message({
+        sender: data.sender,
+        recipient: data.recipient,
+        content: data.content,
+        messageType: data.messageType || 'text',
+        booking: data.booking || null
+      });
+
+      await newMessage.save();
+      
+      // Populate sender and recipient info
+      await newMessage.populate([
+        { path: 'sender', select: 'firstName lastName avatar email' },
+        { path: 'recipient', select: 'firstName lastName avatar email' }
+      ]);
+
+      // Create room ID (consistent for both users)
+      const roomId = [data.sender, data.recipient].sort().join('_');
+      
+      // Emit to both users
+      io.to(roomId).emit('new_message', newMessage);
+      
+      // Also emit to individual user rooms in case they're not in the chat room
+      io.to(`user_${data.recipient}`).emit('message_notification', {
+        messageId: newMessage._id,
+        sender: newMessage.sender,
+        content: data.content,
+        timestamp: newMessage.createdAt
+      });
+
+    } catch (error) {
+      console.error('Error sending message:', error);
+      socket.emit('message_error', { error: 'Failed to send message' });
+    }
+  });
+
+  // Handle message read status
+  socket.on('mark_message_read', async (messageId: string) => {
+    try {
+      const Message = (await import('./models/Message')).default;
+      await Message.findByIdAndUpdate(messageId, {
+        isRead: true,
+        readAt: new Date()
+      });
+      
+      socket.broadcast.emit('message_read', { messageId });
+    } catch (error) {
+      console.error('Error marking message as read:', error);
+    }
+  });
+
+  // Handle disconnection
+  socket.on('disconnect', () => {
+    // Remove user from connected users
+    for (const [userId, socketId] of connectedUsers.entries()) {
+      if (socketId === socket.id) {
+        connectedUsers.delete(userId);
+        break;
+      }
+    }
+    console.log('User disconnected:', socket.id);
+  });
+});
+
 // Start Server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
