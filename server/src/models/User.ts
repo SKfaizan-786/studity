@@ -70,6 +70,7 @@ export interface IUser extends Document {
   profileComplete: boolean;
   studentProfile?: IStudentProfile;
   teacherProfile?: ITeacherProfile;
+  favourites?: string[]; // Array of teacher IDs
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
   createdAt: Date;
@@ -186,6 +187,7 @@ const UserSchema = new Schema<IUser>(
       board: String,
     },
     teacherProfile: TeacherProfileSchema,
+    favourites: [{ type: String }], // Array of teacher IDs
   },
   {
     timestamps: true,

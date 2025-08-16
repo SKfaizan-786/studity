@@ -1,3 +1,68 @@
+// -------------------- Favourites (Student/Teacher) --------------------
+
+// Get all favourite teachers for the logged-in user
+export const getFavourites = async (req: Request, res: Response) => {
+  try {
+    if (!req.user?._id) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    const user = await User.findById(req.user._id).select('favourites');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json({ favourites: user.favourites || [] });
+  } catch (error) {
+    res.status(500).json({ message: getErrorMessage(error) });
+  }
+};
+
+// Add a teacher to favourites
+export const addFavourite = async (req: Request, res: Response) => {
+  try {
+    if (!req.user?._id) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    const { teacherId } = req.body;
+    if (!teacherId) {
+      return res.status(400).json({ message: 'teacherId is required' });
+    }
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $addToSet: { favourites: teacherId } },
+      { new: true }
+    ).select('favourites');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json({ favourites: user.favourites });
+  } catch (error) {
+    res.status(500).json({ message: getErrorMessage(error) });
+  }
+};
+
+// Remove a teacher from favourites
+export const removeFavourite = async (req: Request, res: Response) => {
+  try {
+    if (!req.user?._id) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+    const { teacherId } = req.body;
+    if (!teacherId) {
+      return res.status(400).json({ message: 'teacherId is required' });
+    }
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $pull: { favourites: teacherId } },
+      { new: true }
+    ).select('favourites');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json({ favourites: user.favourites });
+  } catch (error) {
+    res.status(500).json({ message: getErrorMessage(error) });
+  }
+};
 import { Request, Response } from 'express';
 import User, { IUser } from '../models/User';
 

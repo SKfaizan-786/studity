@@ -2,37 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   User,
-  GraduationCap,
+  Mail,
+  Phone,
+  Calendar,
+  Home,
   Save,
-  ArrowLeft,
-  Loader2
+  X,
+  Book,
+  CheckCircle,
 } from 'lucide-react';
 
-const TeacherProfileEdit = () => {
+const StudentProfile = () => {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    phone: '',
-    location: '',
-    bio: '',
-    qualifications: '',
-    experienceYears: '',
-    currentOccupation: '',
-    subjects: '',
-    boards: '',
-    classes: '',
-    teachingMode: '',
-    preferredSchedule: '',
-    teachingApproach: '',
-    hourlyRate: ''
-  });
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedProfile, setEditedProfile] = useState({});
   const [loading, setLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState({ text: '', type: '' });
 
-  // Helper function to safely get data from localStorage
+  // Helper functions for localStorage
   const getFromLocalStorage = (key) => {
     try {
       const value = localStorage.getItem(key);
@@ -43,7 +30,6 @@ const TeacherProfileEdit = () => {
     }
   };
 
-  // Helper function to safely set data to localStorage
   const setToLocalStorage = (key, value) => {
     try {
       localStorage.setItem(key, JSON.stringify(value));
@@ -52,105 +38,93 @@ const TeacherProfileEdit = () => {
     }
   };
 
-  // Effect to load user data from local storage
   useEffect(() => {
     const user = getFromLocalStorage('currentUser');
-    if (!user || user.role !== 'teacher') {
+    if (!user || user.role !== 'student') {
       navigate('/login');
       return;
     }
     setCurrentUser(user);
-
-    // Populate form data with existing profile information
-    const teacherData = user.teacherProfileData || user.teacherProfile || {};
-    setFormData({
-      firstName: teacherData.firstName || user.firstName || '',
-      lastName: teacherData.lastName || user.lastName || '',
-      phone: teacherData.phone || '',
-      location: teacherData.location || '',
-      bio: teacherData.bio || '',
-      qualifications: teacherData.qualifications || '',
-      experienceYears: teacherData.experienceYears || teacherData.experience || '',
-      currentOccupation: teacherData.currentOccupation || '',
-      subjects: Array.isArray(teacherData.subjects) ? teacherData.subjects.join(', ') : '',
-      boards: Array.isArray(teacherData.boards) ? teacherData.boards.join(', ') : '',
-      classes: Array.isArray(teacherData.classes) ? teacherData.classes.join(', ') : '',
-      teachingMode: teacherData.teachingMode || '',
-      preferredSchedule: teacherData.preferredSchedule || '',
-      teachingApproach: teacherData.teachingApproach || '',
-      hourlyRate: teacherData.hourlyRate || ''
+    // Initialize editedProfile with a deep merge of currentUser and studentProfile
+    setEditedProfile({
+      ...user,
+      ...user.studentProfile,
+      // Ensure subjects and learningGoals are initialized as arrays for editing
+      subjects: user.studentProfile?.subjects || [],
+      learningGoals: user.studentProfile?.learningGoals || [],
     });
-
     setLoading(false);
   }, [navigate]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    setIsSaving(true);
-    setMessage({ text: '', type: '' });
-
+  const handleSave = async () => {
     const token = getFromLocalStorage('token');
     if (!token) {
-      setMessage({ text: "Authentication token missing. Please log in again.", type: "error" });
-      setIsSaving(false);
+      alert('No authentication token found');
       return;
     }
 
-    try {
-      // Prepare the data to be sent to the backend
-      const profileToSave = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        phone: formData.phone,
-        location: formData.location,
-        bio: formData.bio,
-        qualifications: formData.qualifications,
-        experienceYears: formData.experienceYears,
-        currentOccupation: formData.currentOccupation,
-        teachingMode: formData.teachingMode,
-        preferredSchedule: formData.preferredSchedule,
-        teachingApproach: formData.teachingApproach,
-        hourlyRate: formData.hourlyRate,
-        // Convert comma-separated strings back into arrays
-        subjects: formData.subjects.split(',').map(s => s.trim()).filter(s => s),
-        boards: formData.boards.split(',').map(b => b.trim()).filter(b => b),
-        classes: formData.classes.split(',').map(c => c.trim()).filter(c => c),
-      };
+    // Merge the updated data before sending
+    const updatedData = {
+      ...currentUser.studentProfile, // Start with all existing student profile fields
+      ...editedProfile, // Overwrite with any changes from the edited state
+      // Ensure specific fields are correctly formatted before sending
+      subjects: Array.isArray(editedProfile.subjects) ? editedProfile.subjects : [],
+      learningGoals: Array.isArray(editedProfile.learningGoals) ? editedProfile.learningGoals : [],
+    };
+    
+    // The API might expect fields from the root user object as well, so merge them too
+    const finalProfileData = {
+        firstName: updatedData.firstName,
+        lastName: updatedData.lastName,
+        phone: updatedData.phone,
+        location: updatedData.location,
+        bio: updatedData.bio,
+        photoUrl: updatedData.photoUrl || '',
+        grade: updatedData.grade,
+        board: updatedData.board,
+        subjects: updatedData.subjects,
+        learningGoals: updatedData.learningGoals,
+    };
 
-      // Make the API call to your backend server
-      const response = await fetch('http://localhost:5000/api/profile/teacher', {
+    try {
+      const response = await fetch('http://localhost:5000/api/profile/student', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(profileToSave),
+        body: JSON.stringify(finalProfileData),
       });
 
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || 'Failed to update profile');
+        alert(result.message || 'Failed to update profile');
+        return;
       }
 
-      // Update local storage with the new user data from the backend
       setToLocalStorage('currentUser', result.user);
       setCurrentUser(result.user);
-
-      setMessage({ text: 'Profile updated successfully!', type: 'success' });
-      setTimeout(() => navigate('/teacher/profile'), 2000); // Redirect after a short delay
+      setIsEditing(false);
     } catch (error) {
-      console.error('Failed to save profile:', error);
-      setMessage({ text: 'Failed to save profile. ' + error.message, type: 'error' });
-    } finally {
-      setIsSaving(false);
+      console.error('Save failed:', error);
+      alert('Failed to update profile due to a network error.');
     }
+  };
+
+  const handleCancel = () => {
+    setEditedProfile({
+      ...currentUser,
+      ...currentUser.studentProfile,
+    });
+    setIsEditing(false);
+  };
+
+  const handleInputChange = (field, value) => {
+    setEditedProfile((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
   if (loading) {
@@ -158,10 +132,37 @@ const TeacherProfileEdit = () => {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading profile data...</p>
+          <p className="text-slate-600">Loading profile...</p>
         </div>
       </div>
     );
+  }
+
+  if (!currentUser) return null;
+
+  const getProfileField = (field, fallback = 'Not provided') => {
+    const value = isEditing ? editedProfile[field] : (currentUser.studentProfile && currentUser.studentProfile[field]) || currentUser[field];
+    return value || fallback;
+  };
+
+  const profileImage = getProfileField('photoUrl') || '/default-profile.png';
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  let createdAt = currentUser.createdAt;
+  if (!createdAt && currentUser.studentProfile && currentUser.studentProfile.createdAt) {
+    createdAt = currentUser.studentProfile.createdAt;
+  }
+  if (!createdAt) {
+    createdAt = new Date().toISOString();
   }
 
   return (
@@ -177,248 +178,215 @@ const TeacherProfileEdit = () => {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <Link
-            to="/teacher/profile"
+            to="/student/dashboard"
             className="flex items-center space-x-2 px-4 py-2 bg-white/70 backdrop-blur-sm border border-white/40 rounded-xl hover:bg-white/80 transition-all duration-200 shadow-sm text-slate-700 hover:text-blue-600 group"
           >
-            <ArrowLeft className="w-5 h-5 transition-colors duration-200 group-hover:text-blue-600" />
-            <span className="font-medium">Back to Profile</span>
+            <Home className="w-5 h-5 transition-colors duration-200 group-hover:text-blue-600" />
+            <span className="font-medium">Back to Dashboard</span>
           </Link>
 
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-slate-900">Edit Profile</h1>
-            <p className="text-slate-600">Update your personal and teaching details</p>
+            <h1 className="text-3xl font-bold text-slate-900">My Profile</h1>
+            <p className="text-slate-600">View and manage your account information</p>
           </div>
 
           <div className="w-32"></div> {/* Spacer for centering */}
         </div>
 
-        {/* Form Card */}
-        <div className="max-w-6xl mx-auto">
+        {/* Profile Card */}
+        <div className="max-w-3xl mx-auto">
           <div className="bg-white/80 backdrop-blur-md rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
-            <form onSubmit={handleSubmit} className="p-10">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                {/* Personal Information Section */}
-                <div>
-                  <h3 className="text-xl font-bold mb-5 text-blue-700 flex items-center gap-2">
-                    <User className="w-6 h-6" /> Personal Information
-                  </h3>
-                  <div className="space-y-5">
-                    <div>
-                      <label htmlFor="firstName" className="block text-sm font-semibold text-slate-700 mb-1">First Name</label>
-                      <input
-                        type="text"
-                        name="firstName"
-                        id="firstName"
-                        value={formData.firstName}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="lastName" className="block text-sm font-semibold text-slate-700 mb-1">Last Name</label>
-                      <input
-                        type="text"
-                        name="lastName"
-                        id="lastName"
-                        value={formData.lastName}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="phone" className="block text-sm font-semibold text-slate-700 mb-1">Phone Number</label>
-                      <input
-                        type="tel"
-                        name="phone"
-                        id="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="location" className="block text-sm font-semibold text-slate-700 mb-1">Location</label>
-                      <input
-                        type="text"
-                        name="location"
-                        id="location"
-                        value={formData.location}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="bio" className="block text-sm font-semibold text-slate-700 mb-1">Bio</label>
-                      <textarea
-                        name="bio"
-                        id="bio"
-                        value={formData.bio}
-                        onChange={handleChange}
-                        rows="3"
-                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      ></textarea>
-                    </div>
-                  </div>
+            {/* Profile Header */}
+            <div className="bg-gradient-to-r from-blue-700 to-purple-700 px-10 py-8 text-white flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+              <div className="flex items-center gap-6">
+                <div className="w-28 h-28 bg-white/30 rounded-full flex items-center justify-center overflow-hidden border-4 border-white/40 shadow-lg">
+                  {profileImage ? (
+                    <img src={profileImage} alt="Profile" className="w-28 h-28 object-cover rounded-full" />
+                  ) : (
+                    <User className="w-12 h-12" />
+                  )}
                 </div>
-
-                {/* Teaching Information Section */}
                 <div>
-                  <h3 className="text-xl font-bold mb-5 text-purple-700 flex items-center gap-2">
-                    <GraduationCap className="w-6 h-6" /> Teaching Information
-                  </h3>
-                  <div className="space-y-5">
-                    <div>
-                      <label htmlFor="qualifications" className="block text-sm font-semibold text-slate-700 mb-1">Qualifications</label>
-                      <input
-                        type="text"
-                        name="qualifications"
-                        id="qualifications"
-                        value={formData.qualifications}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="experienceYears" className="block text-sm font-semibold text-slate-700 mb-1">Experience (years)</label>
-                      <input
-                        type="number"
-                        name="experienceYears"
-                        id="experienceYears"
-                        value={formData.experienceYears}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="currentOccupation" className="block text-sm font-semibold text-slate-700 mb-1">Current Occupation</label>
-                      <input
-                        type="text"
-                        name="currentOccupation"
-                        id="currentOccupation"
-                        value={formData.currentOccupation}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="subjects" className="block text-sm font-semibold text-slate-700 mb-1">Subjects (comma-separated)</label>
-                      <input
-                        type="text"
-                        name="subjects"
-                        id="subjects"
-                        value={formData.subjects}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="boards" className="block text-sm font-semibold text-slate-700 mb-1">Boards (comma-separated)</label>
-                      <input
-                        type="text"
-                        name="boards"
-                        id="boards"
-                        value={formData.boards}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="classes" className="block text-sm font-semibold text-slate-700 mb-1">Classes/Courses Taught (comma-separated)</label>
-                      <input
-                        type="text"
-                        name="classes"
-                        id="classes"
-                        value={formData.classes}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="teachingMode" className="block text-sm font-semibold text-slate-700 mb-1">Preferred Teaching Mode</label>
-                      <select
-                        name="teachingMode"
-                        id="teachingMode"
-                        value={formData.teachingMode}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      >
-                        <option value="">Select mode</option>
-                        <option value="Online">Online</option>
-                        <option value="Offline">Offline</option>
-                        <option value="Hybrid">Hybrid</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label htmlFor="preferredSchedule" className="block text-sm font-semibold text-slate-700 mb-1">Preferred Schedule</label>
-                      <input
-                        type="text"
-                        name="preferredSchedule"
-                        id="preferredSchedule"
-                        value={formData.preferredSchedule}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="teachingApproach" className="block text-sm font-semibold text-slate-700 mb-1">Teaching Approach</label>
-                      <textarea
-                        name="teachingApproach"
-                        id="teachingApproach"
-                        value={formData.teachingApproach}
-                        onChange={handleChange}
-                        rows="3"
-                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      ></textarea>
-                    </div>
-                    <div>
-                      <label htmlFor="hourlyRate" className="block text-sm font-semibold text-slate-700 mb-1">Hourly Rate (INR)</label>
-                      <input
-                        type="number"
-                        name="hourlyRate"
-                        id="hourlyRate"
-                        value={formData.hourlyRate}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      />
-                    </div>
+                  <h2 className="text-3xl font-extrabold tracking-tight">
+                    {getProfileField('firstName')} {getProfileField('lastName')}
+                  </h2>
+                  <p className="text-blue-100 text-lg font-medium">Student</p>
+                  <div className="flex items-center space-x-2 mt-2">
+                    <Mail className="w-5 h-5" />
+                    <span className="text-base">{currentUser.email}</span>
                   </div>
                 </div>
               </div>
-
-              {message.text && (
-                <div className={`mt-6 p-4 rounded-lg text-center font-medium ${
-                  message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                }`}>
-                  {message.text}
+              {!isEditing ? (
+                <button
+                  className="bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-xl font-semibold shadow-lg border border-white/30 transition-all duration-150"
+                  onClick={() => setIsEditing(true)}
+                >
+                  Edit Profile
+                </button>
+              ) : (
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleSave}
+                    className="flex items-center space-x-2 px-6 py-2 bg-green-500 hover:bg-green-600 rounded-xl font-semibold shadow-lg border border-green-600 text-white transition-all duration-150"
+                  >
+                    <Save className="w-5 h-5" />
+                    <span>Save</span>
+                  </button>
+                  <button
+                    onClick={handleCancel}
+                    className="flex items-center space-x-2 px-6 py-2 bg-red-500 hover:bg-red-600 rounded-xl font-semibold shadow-lg border border-red-600 text-white transition-all duration-150"
+                  >
+                    <X className="w-5 h-5" />
+                    <span>Cancel</span>
+                  </button>
                 </div>
               )}
-
-              <div className="mt-8 flex justify-center">
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="w-full sm:w-auto flex items-center justify-center space-x-2 px-8 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Saving...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-5 h-5" />
-                      <span>Save Changes</span>
-                    </>
-                  )}
-                </button>
+            </div>
+            {/* Profile Content */}
+            <div className="p-10 grid grid-cols-1 md:grid-cols-2 gap-10">
+              {/* Personal Information */}
+              <div>
+                <h3 className="text-xl font-bold mb-5 text-blue-700 flex items-center gap-2"><User className="w-6 h-6" /> Personal Information</h3>
+                <div className="space-y-5">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">First Name</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editedProfile.firstName || ''}
+                        onChange={(e) => handleInputChange('firstName', e.target.value)}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                      />
+                    ) : (
+                      <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">{getProfileField('firstName')}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Last Name</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editedProfile.lastName || ''}
+                        onChange={(e) => handleInputChange('lastName', e.target.value)}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                      />
+                    ) : (
+                      <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">{getProfileField('lastName')}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Email</label>
+                    <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">{currentUser.email}</p>
+                    <span className="text-xs text-slate-400">Email cannot be changed</span>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Phone Number</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editedProfile.phone || ''}
+                        onChange={(e) => handleInputChange('phone', e.target.value)}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                      />
+                    ) : (
+                      <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">{getProfileField('phone')}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Bio</label>
+                    {isEditing ? (
+                      <textarea
+                        value={editedProfile.bio || ''}
+                        onChange={(e) => handleInputChange('bio', e.target.value)}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
+                        rows="3"
+                        placeholder="Tell us about yourself"
+                      />
+                    ) : (
+                      <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base min-h-[60px]">{getProfileField('bio')}</p>
+                    )}
+                  </div>
+                </div>
               </div>
-            </form>
+              {/* Academic Information */}
+              <div>
+                <h3 className="text-xl font-bold mb-5 text-purple-700 flex items-center gap-2"><Book className="w-6 h-6" /> Academic Information</h3>
+                <div className="space-y-5">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Grade Level</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editedProfile.grade || ''}
+                        onChange={(e) => handleInputChange('grade', e.target.value)}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
+                      />
+                    ) : (
+                      <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">{getProfileField('grade')}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Subjects of Interest</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={Array.isArray(editedProfile.subjects) ? editedProfile.subjects.join(', ') : (editedProfile.subjects || '')}
+                        onChange={(e) => handleInputChange('subjects', e.target.value.split(',').map(s => s.trim()))}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
+                      />
+                    ) : (
+                      <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base">{getProfileField('subjects') && Array.isArray(getProfileField('subjects')) ? getProfileField('subjects').join(', ') : getProfileField('subjects')}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Learning Goals</label>
+                    {isEditing ? (
+                      <textarea
+                        value={Array.isArray(editedProfile.learningGoals) ? editedProfile.learningGoals.join('\n') : (editedProfile.learningGoals || '')}
+                        onChange={(e) => handleInputChange('learningGoals', e.target.value.split('\n'))}
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-base"
+                        rows="3"
+                        placeholder="What are your learning objectives?"
+                      />
+                    ) : (
+                      <p className="text-slate-900 bg-slate-50 px-4 py-2 rounded-lg text-base min-h-[80px]">{getProfileField('learningGoals') && Array.isArray(getProfileField('learningGoals')) ? getProfileField('learningGoals').join(', ') : getProfileField('learningGoals')}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {/* Account Status */}
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-8 mt-10">
+                <div className="bg-gradient-to-r from-green-50 to-green-100 p-5 rounded-xl shadow flex flex-col items-start">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <span className="font-semibold text-green-800">Profile Status</span>
+                  </div>
+                  <p className="text-green-700 mt-2 text-base">{currentUser.profileComplete ? 'Complete' : 'Incomplete'}</p>
+                </div>
+                <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-5 rounded-xl shadow flex flex-col items-start">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-blue-600" />
+                    <span className="font-semibold text-blue-800">Member Since</span>
+                  </div>
+                  <p className="text-blue-700 mt-2 text-base">
+                    {formatDate(createdAt)}
+                  </p>
+                </div>
+                <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 p-5 rounded-xl shadow flex flex-col items-start">
+                  <div className="flex items-center gap-2">
+                    <User className="w-5 h-5 text-yellow-600" />
+                    <span className="font-semibold text-yellow-800">Role</span>
+                  </div>
+                  <p className="text-yellow-700 mt-2 text-base">{currentUser.role}</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
   );
-};
+}
 
-export default TeacherProfileEdit;
+export default StudentProfile;

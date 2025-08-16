@@ -1,21 +1,20 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Filter, Star, Clock, BookOpen, Award, ChevronDown, X, Check, Heart, MapPin, Calendar, DollarSign, Users, Zap, SlidersHorizontal, Loader2 } from "lucide-react";
 import API_CONFIG from '../../config/api';
 
-// Add this debug function before the main component
-const debugTeacherData = (teachers) => {
-  console.log('🔍 DEBUGGING TEACHER DATA:');
-  console.log('Total teachers received:', teachers.length);
-  
-  teachers.forEach((teacher, index) => {
-    console.log(`Teacher ${index + 1}:`, {
-      name: teacher.name,
-      isListed: teacher.teacherProfile?.isListed,
-      subjects: teacher.teacherProfile?.subjectsTaught || teacher.teacherProfile?.subjects,
-      profile: teacher.teacherProfile
-    });
-  });
+// Helper function to get teacher avatar, availability days, etc.
+const getTeacherAvatar = (teacher) => {
+  if (teacher.profilePicture) {
+    return teacher.profilePicture;
+  }
+  const firstName = teacher.name || 'T';
+  return firstName.charAt(0).toUpperCase();
+};
+
+const getAvailabilityDays = (availability) => {
+  if (!availability || !Array.isArray(availability)) return ["Mon", "Wed", "Fri"];
+  return availability.map(slot => slot.day).slice(0, 3);
 };
 
 export default function EnhancedTeacherPlatform() {
@@ -24,6 +23,27 @@ export default function EnhancedTeacherPlatform() {
   const [error, setError] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [favorites, setFavorites] = useState([]);
+  const [showFavouritesOnly, setShowFavouritesOnly] = useState(false);
+  // Load favorites from backend on mount
+  useEffect(() => {
+    const fetchFavourites = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const API_BASE_URL = API_CONFIG.BASE_URL;
+        const res = await fetch(`${API_BASE_URL}/api/profile/favourites`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setFavorites(data.favourites || []);
+        }
+      } catch (err) {
+        console.error('Failed to load favourites from backend', err);
+      }
+    };
+    fetchFavourites();
+  }, []);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterBoard, setFilterBoard] = useState("");
   const [filterSubject, setFilterSubject] = useState("");
@@ -44,268 +64,76 @@ export default function EnhancedTeacherPlatform() {
 
   const navigate = useNavigate();
 
+  // Check login status function, defined as a stable useCallback
+  const checkLoginStatus = useCallback(() => {
+    const token = localStorage.getItem('token');
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    
+    console.log('=== LOGIN STATUS CHECK ===');
+    console.log('Token:', token ? 'Present' : 'Missing');
+    console.log('Current User:', currentUser);
+    console.log('User Role:', currentUser.role);
+    console.log('Teacher Profile:', currentUser.teacherProfile);
+    console.log('Is Listed:', currentUser.teacherProfile?.isListed);
+    console.log('========================');
+    
+    if (!token || !currentUser.role) {
+      console.error('❌ Authentication failed. Redirecting to login...');
+      setTimeout(() => navigate('/login'), 2000);
+      return false;
+    }
+    return true;
+  }, [navigate]);
+
   // Fetch real teachers from backend
-  const fetchTeachers = async () => {
+  const fetchTeachers = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
       const token = localStorage.getItem('token');
-      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
       
       console.log('🔍 Frontend: Fetching teachers...');
       console.log('🔑 Token:', token ? `Present (${token.substring(0, 20)}...)` : 'Missing');
-      console.log('👤 Current User:', currentUser);
-      console.log('🎭 User Role:', currentUser.role);
       
-      if (!token) {
-        console.log('❌ No token found');
-        
-        // If we have a valid user but no token, try to work with localStorage only
-        if (currentUser && currentUser.role) {
-          console.log('👤 Valid user found, using localStorage fallback only');
-          
-          // Skip API calls and go directly to localStorage fallback
-          const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
-          console.log('📦 All users in localStorage:', allUsers);
-          
-          // If no users in localStorage but we have a current teacher user, add them
-          let usersToCheck = allUsers;
-          if (allUsers.length === 0 && currentUser.role === 'teacher' && currentUser.teacherProfile) {
-            console.log('📝 Adding current teacher to users list');
-            usersToCheck = [currentUser];
-            localStorage.setItem('users', JSON.stringify([currentUser]));
-          }
-          
-          const listedTeachers = usersToCheck.filter(user => {
-            const isTeacher = user.role === 'teacher';
-            const hasProfile = user.teacherProfile;
-            const isListed = user.teacherProfile?.isListed === true;
-            
-            console.log(`👤 Checking user ${user.email || user.firstName}: teacher=${isTeacher}, hasProfile=${hasProfile}, isListed=${isListed}`);
-            
-            return isTeacher && hasProfile && isListed;
-          });
-
-          console.log('🎯 Listed teachers from localStorage:', listedTeachers);
-
-          const formattedTeachers = listedTeachers.map(teacher => ({
-            id: teacher._id || teacher.id,
-            name: `${teacher.firstName || ''} ${teacher.lastName || ''}`.trim() || 'Teacher',
-            subject: teacher.teacherProfile?.subjects?.[0] || teacher.teacherProfile?.subjectsTaught?.[0] || 'General',
-            board: teacher.teacherProfile?.boards?.[0] || teacher.teacherProfile?.boardsTaught?.[0] || 'CBSE',
-            experience: teacher.teacherProfile?.experienceYears || 1,
-            fee: teacher.teacherProfile?.hourlyRate || 500,
-            rating: teacher.rating || 4.5,
-            totalStudents: teacher.totalStudents || 0,
-            avatar: getTeacherAvatar(teacher),
-            specializations: teacher.teacherProfile?.subjects || teacher.teacherProfile?.subjectsTaught || ['General'],
-            location: teacher.teacherProfile?.location || 'India',
-            availability: getAvailabilityDays(teacher.teacherProfile?.availability) || ["Mon", "Wed", "Fri"],
-            bio: teacher.teacherProfile?.bio || 'Experienced educator dedicated to student success.',
-            languages: ["English", "Hindi"],
-            qualifications: [teacher.teacherProfile?.qualifications || 'Graduate'],
-            verified: true,
-            email: teacher.email,
-            phone: teacher.teacherProfile?.phone,
-            teachingMode: teacher.teacherProfile?.teachingMode || 'hybrid',
-            profilePicture: teacher.teacherProfile?.photoUrl
-          }));
-
-          console.log('🎯 Final formatted teachers:', formattedTeachers);
-          setTeachers(formattedTeachers);
-          setLoading(false);
-          return;
-        } else {
-          console.log('❌ No valid user found');
-          setError('Please login to view teachers');
-          setLoading(false);
-          return;
-        }
-      }
-
-      // Check if user is logged in
-      if (!currentUser || !currentUser.role) {
-        console.log('❌ No current user found, redirecting to login');
-        setError('Please login to view teachers');
-        setTimeout(() => {
-          navigate('/login');
-        }, 2000);
+      if (!checkLoginStatus()) {
+        setLoading(false);
         return;
       }
-
-      // Use the API config instead of hardcoded URL
+      
       const API_BASE_URL = API_CONFIG.BASE_URL;
-      console.log('🌐 API Base URL:', API_BASE_URL);
 
-      // Try to fetch from API first
-      try {
-        // First, let's try the debug endpoint
-        console.log('🐛 Trying debug endpoint...');
-        const debugResponse = await fetch(`${API_BASE_URL}${API_CONFIG.ENDPOINTS.TEACHERS_DEBUG}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        console.log('🐛 Debug response status:', debugResponse.status);
-        
-        if (debugResponse.ok) {
-          const debugData = await debugResponse.json();
-          console.log('🐛 Debug data:', debugData);
-        } else {
-          console.log('🐛 Debug endpoint failed:', await debugResponse.text());
+      const response = await fetch(`${API_BASE_URL}${API_CONFIG.ENDPOINTS.TEACHERS_LIST}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
+      });
 
-        // Now try the regular list endpoint
-        console.log('📋 Trying teachers list endpoint...');
-        const response = await fetch(`${API_BASE_URL}${API_CONFIG.ENDPOINTS.TEACHERS_LIST}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
+      console.log('📡 API Response status:', response.status);
 
-        console.log('📡 API Response status:', response.status);
-
-        if (response.ok) {
-          const teachersData = await response.json();
-          console.log('📊 API returned teachers:', teachersData);
-          debugTeacherData(teachersData); // Add this line
-          
-          // Format teachers data for the UI
-          const formattedTeachers = teachersData.map(teacher => {
-            console.log('🔄 Formatting teacher:', teacher);
-            
-            // Handle both possible data structures for subjects
-            const subjects = teacher.teacherProfile?.subjectsTaught || 
-                            teacher.teacherProfile?.subjects || 
-                            [];
-            const boards = teacher.teacherProfile?.boardsTaught || 
-                          teacher.teacherProfile?.boards || 
-                          [];
-            const classes = teacher.teacherProfile?.classesTaught || 
-                           teacher.teacherProfile?.classes || 
-                           [];
-
-            return {
-              id: teacher._id || teacher.id,
-              name: `${teacher.firstName || ''} ${teacher.lastName || ''}`.trim() || 'Teacher',
-              subject: Array.isArray(subjects) ? subjects[0]?.text || subjects[0] : subjects,
-              board: Array.isArray(boards) ? boards[0]?.text || boards[0] : boards,
-              experience: teacher.teacherProfile?.experienceYears || 1,
-              fee: teacher.teacherProfile?.hourlyRate || 500,
-              rating: teacher.rating || 4.5,
-              totalStudents: teacher.totalStudents || 0,
-              avatar: getTeacherAvatar(teacher),
-              specializations: Array.isArray(subjects) ? subjects.map(s => s.text || s) : [subjects].filter(Boolean),
-              location: teacher.teacherProfile?.location || 'India',
-              availability: getAvailabilityDays(teacher.teacherProfile?.availability) || ["Mon", "Wed", "Fri"],
-              bio: teacher.teacherProfile?.bio || 'Experienced educator dedicated to student success.',
-              languages: ["English", "Hindi"],
-              qualifications: [teacher.teacherProfile?.qualifications || 'Graduate'],
-              verified: true,
-              email: teacher.email,
-              phone: teacher.teacherProfile?.phone,
-              teachingMode: teacher.teacherProfile?.teachingMode || 'hybrid',
-              profilePicture: teacher.teacherProfile?.photoUrl
-            };
-          });
-
-          console.log('✅ Formatted teachers:', formattedTeachers);
-          setTeachers(formattedTeachers);
-          return;
-        } else {
-          const errorText = await response.text();
-          console.error('❌ API Error:', response.status, errorText);
-          
-          if (response.status === 401) {
-            console.log('🔑 Token is invalid, removing and redirecting');
-            // Token is invalid, redirect to login
-            localStorage.removeItem('token');
-            localStorage.removeItem('currentUser');
-            setError('Your session has expired. Please login again.');
-            setTimeout(() => {
-              navigate('/login');
-            }, 2000);
-            return;
-          }
-          
-          throw new Error('API request failed');
-        }
-      } catch (apiError) {
-        console.log('⚠️ API not available, trying localStorage fallback...');
-        console.error('API Error details:', apiError);
+      if (response.ok) {
+        const teachersData = await response.json();
+        console.log('📊 API returned data:', teachersData);
         
-        // ALWAYS try localStorage fallback for now since API might not be working
-        console.log('📦 Falling back to localStorage...');
-        
-        // Get all users from localStorage
-        const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
-        
-        console.log('📦 All users in localStorage:', allUsers);
-        console.log('👤 Current user details:', currentUser);
-        
-        // If no users in localStorage but we have a current teacher user, add them
-        let usersToCheck = allUsers;
-        if (allUsers.length === 0 && currentUser.role === 'teacher' && currentUser.teacherProfile) {
-          console.log('📝 Adding current teacher to users list');
-          usersToCheck = [currentUser];
-          // Also save to localStorage for future use
-          localStorage.setItem('users', JSON.stringify([currentUser]));
-        }
-        
-        const listedTeachers = usersToCheck.filter(user => {
-          const isTeacher = user.role === 'teacher';
-          const hasProfile = user.teacherProfile;
-          const isListed = user.teacherProfile?.isListed === true;
-          
-          console.log(`👤 Checking user ${user.email || user.firstName}: teacher=${isTeacher}, hasProfile=${hasProfile}, isListed=${isListed}`);
-          
-          return isTeacher && hasProfile && isListed;
-        });
-
-        console.log('🎯 Listed teachers from localStorage:', listedTeachers);
-
-        if (listedTeachers.length === 0) {
-          console.log('📝 No listed teachers found. Checking if current user is a listed teacher...');
-          
-          // If current user is a teacher but not in the list, check their status
-          if (currentUser.role === 'teacher' && currentUser.teacherProfile) {
-            console.log('👨‍🏫 Current user is teacher with profile');
-            console.log('📋 Teacher profile:', currentUser.teacherProfile);
-            console.log('✅ isListed status:', currentUser.teacherProfile.isListed);
-            
-            if (currentUser.teacherProfile.isListed) {
-              console.log('✅ Current teacher is listed, adding to display');
-              listedTeachers.push(currentUser);
-            }
-          }
-        }
-
-        const formattedTeachers = listedTeachers.map(teacher => {
-          // Handle both possible data structures
-          const subjects = teacher.teacherProfile?.subjectsTaught || 
-                          teacher.teacherProfile?.subjects || 
-                          [];
-          const boards = teacher.teacherProfile?.boardsTaught || 
-                        teacher.teacherProfile?.boards || 
-                        [];
+        const formattedTeachers = teachersData.map(teacher => {
+          const subjects = teacher.teacherProfile?.subjects || [];
+          const boards = teacher.teacherProfile?.boards || [];
+          const classes = teacher.teacherProfile?.classes || [];
 
           return {
             id: teacher._id || teacher.id,
             name: `${teacher.firstName || ''} ${teacher.lastName || ''}`.trim() || 'Teacher',
-            subject: Array.isArray(subjects) ? (subjects[0]?.text || subjects[0]) : subjects,
-            board: Array.isArray(boards) ? (boards[0]?.text || boards[0]) : boards,
+            subject: Array.isArray(subjects) ? subjects[0]?.text || subjects[0] : subjects,
+            board: Array.isArray(boards) ? boards[0]?.text || boards[0] : boards,
             experience: teacher.teacherProfile?.experienceYears || 1,
             fee: teacher.teacherProfile?.hourlyRate || 500,
-            rating: teacher.rating || 4.5,
+            rating: teacher.rating || 0, // Removed the default 4.5 rating
             totalStudents: teacher.totalStudents || 0,
             avatar: getTeacherAvatar(teacher),
-            specializations: Array.isArray(subjects) ? subjects.map(s => s.text || s).filter(Boolean) : [subjects].filter(Boolean),
+            specializations: Array.isArray(subjects) ? subjects.map(s => s.text || s) : [subjects].filter(Boolean),
             location: teacher.teacherProfile?.location || 'India',
-            availability: getAvailabilityDays(teacher.teacherProfile?.availability) || ["Mon", "Wed", "Fri"],
+            availability: getAvailabilityDays(teacher.teacherProfile?.availability),
             bio: teacher.teacherProfile?.bio || 'Experienced educator dedicated to student success.',
             languages: ["English", "Hindi"],
             qualifications: [teacher.teacherProfile?.qualifications || 'Graduate'],
@@ -317,47 +145,34 @@ export default function EnhancedTeacherPlatform() {
           };
         });
 
-        console.log('🎯 Final formatted teachers:', formattedTeachers);
+        console.log('✅ Formatted teachers:', formattedTeachers);
         setTeachers(formattedTeachers);
+      } else if (response.status === 401) {
+        const errorData = await response.json();
+        console.error('❌ API Error:', response.status, errorData);
+        
+        console.log('🔑 Token is invalid, removing and redirecting');
+        localStorage.removeItem('token');
+        localStorage.removeItem('currentUser');
+        setError('Your session has expired. Please login again.');
+        setTimeout(() => navigate('/login'), 2000);
+      } else {
+        const errorData = await response.json();
+        console.error('❌ API Error:', response.status, errorData);
+        throw new Error('API request failed');
+      }
+    } catch (apiError) {
+      console.error('❌ Error fetching teachers:', apiError);
+      setError('Failed to load teachers. Please try again.');
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('❌ Error fetching teachers:', error);
-    setError('Failed to load teachers. Please try again.');
-  } finally {
-    setLoading(false);
-  }
-  };
-
-  // Helper function to get teacher avatar
-  const getTeacherAvatar = (teacher) => {
-    if (teacher.teacherProfile?.photoUrl) {
-      return teacher.teacherProfile.photoUrl;
-    }
-    const firstName = teacher.firstName || teacher.name || 'T';
-    return firstName.charAt(0).toUpperCase();
-  };
-
-  // Helper function to get availability days
-  const getAvailabilityDays = (availability) => {
-    if (!availability || !Array.isArray(availability)) return null;
-    return availability.map(slot => slot.day).slice(0, 3);
-  };
+  }, [navigate, checkLoginStatus]);
 
   // Load teachers on component mount
   useEffect(() => {
     fetchTeachers();
-  }, []);
-
-  // Load favorites from localStorage
-  useEffect(() => {
-    const savedFavorites = JSON.parse(localStorage.getItem('teacherFavorites') || '[]');
-    setFavorites(savedFavorites);
-  }, []);
-
-  // Save favorites to localStorage
-  useEffect(() => {
-    localStorage.setItem('teacherFavorites', JSON.stringify(favorites));
-  }, [favorites]);
+  }, [fetchTeachers]);
 
   // Animated notification system
   useEffect(() => {
@@ -376,15 +191,13 @@ export default function EnhancedTeacherPlatform() {
         teacher.specializations.some(spec => 
           spec.toLowerCase().includes(searchTerm.toLowerCase())
         );
-      
       const matchesBoard = !filterBoard || teacher.board === filterBoard;
       const matchesSubject = !filterSubject || teacher.subject === filterSubject;
       const matchesPrice = teacher.fee >= priceRange[0] && teacher.fee <= priceRange[1];
       const matchesExperience = teacher.experience >= experienceRange[0] && teacher.experience <= experienceRange[1];
-
-      return matchesSearch && matchesBoard && matchesSubject && matchesPrice && matchesExperience;
+      const matchesFavourite = !showFavouritesOnly || favorites.includes(teacher.id);
+      return matchesSearch && matchesBoard && matchesSubject && matchesPrice && matchesExperience && matchesFavourite;
     });
-
     // Sorting
     filtered.sort((a, b) => {
       switch (sortBy) {
@@ -396,174 +209,67 @@ export default function EnhancedTeacherPlatform() {
         default: return 0;
       }
     });
-
     return filtered;
-  }, [teachers, searchTerm, filterBoard, filterSubject, sortBy, priceRange, experienceRange]);
+  }, [teachers, searchTerm, filterBoard, filterSubject, sortBy, priceRange, experienceRange, showFavouritesOnly, favorites]);
 
   const handleBook = (teacher) => {
     setSelectedTeacher(teacher);
     setShowBookingModal(true);
   };
 
-  // Also update the submitBooking function to use correct API URL
-  const submitBooking = async () => {
-    try {
-      const bookingData = {
-        teacherId: selectedTeacher.id,
-        subject: selectedTeacher.subject,
-        date: bookingForm.date,
-        time: bookingForm.time,
-        duration: parseFloat(bookingForm.duration),
-        notes: bookingForm.message,
-        amount: selectedTeacher.fee * parseFloat(bookingForm.duration)
-      };
-
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.BOOKINGS}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(bookingData)
-      });
-
-      if (response.ok) {
-        const newBooking = await response.json();
-        setBookings([...bookings, newBooking]);
-        setShowBookingModal(false);
-        setBookingForm({ date: "", time: "", duration: "1", message: "" });
-        setNotification(`Booking request sent to ${selectedTeacher.name}! 🎉`);
-      } else {
-        const errorData = await response.json();
-        setNotification(`Error: ${errorData.message || 'Failed to create booking'}`);
-      }
-    } catch (error) {
-      console.error('Error creating booking:', error);
-      setNotification('Failed to create booking. Please try again.');
+  const submitBooking = () => {
+    if (!bookingForm.date || !bookingForm.time) {
+      setNotification("Please select a date and time.");
+      return;
     }
+    
+    const newBooking = {
+      id: Date.now(),
+      teacherId: selectedTeacher.id,
+      teacherName: selectedTeacher.name,
+      subject: selectedTeacher.subject,
+      date: bookingForm.date,
+      time: bookingForm.time,
+      duration: bookingForm.duration,
+      message: bookingForm.message,
+      status: "pending",
+      createdAt: new Date().toISOString(),
+    };
+
+    setBookings([...bookings, newBooking]);
+    setShowBookingModal(false);
+    setBookingForm({ date: "", time: "", duration: "1", message: "" });
+    setNotification(`Booking request sent to ${selectedTeacher.name}! 🎉`);
   };
 
-  const toggleFavorite = (teacherId) => {
-    setFavorites(prev => 
-      prev.includes(teacherId) 
-        ? prev.filter(id => id !== teacherId)
-        : [...prev, teacherId]
-    );
-    setNotification(
-      favorites.includes(teacherId) 
-        ? "Removed from favorites ❤️" 
-        : "Added to favorites! ❤️"
-    );
+  const toggleFavorite = async (teacherId) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    const API_BASE_URL = API_CONFIG.BASE_URL;
+    const isFav = favorites.includes(teacherId);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/profile/favourites`, {
+        method: isFav ? 'DELETE' : 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ teacherId })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setFavorites(data.favourites || []);
+        setNotification(isFav ? "Removed from favorites ❤️" : "Added to favorites! ❤️");
+      } else {
+        setNotification('Failed to update favourites');
+      }
+    } catch (err) {
+      setNotification('Failed to update favourites');
+    }
   };
 
   const uniqueBoards = [...new Set(teachers.map(t => t.board))];
   const uniqueSubjects = [...new Set(teachers.map(t => t.subject))];
-
-  // Loading state
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-indigo-600 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-700">Loading Teachers...</h2>
-          <p className="text-gray-500 mt-2">Please wait while we fetch available teachers</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-8">
-          <div className="text-6xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Oops! Something went wrong</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <div className="space-y-3">
-            <button
-              onClick={fetchTeachers}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200"
-            >
-              Try Again
-            </button>
-            <button
-              onClick={checkLoginStatus}
-              className="w-full bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200"
-            >
-              Check Login Status
-            </button>
-            <button
-              onClick={() => navigate('/login')}
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200"
-            >
-              Go to Login
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const checkLoginStatus = () => {
-    const token = localStorage.getItem('token');
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    
-    console.log('=== LOGIN STATUS CHECK ===');
-    console.log('Token:', token ? 'Present' : 'Missing');
-    console.log('Current User:', currentUser);
-    console.log('User Role:', currentUser.role);
-    console.log('Teacher Profile:', currentUser.teacherProfile);
-    console.log('Is Listed:', currentUser.teacherProfile?.isListed);
-    console.log('========================');
-    
-    if (!token || !currentUser.role) {
-      alert('❌ You are not logged in. Please login first.');
-      navigate('/login');
-    } else {
-      alert(`✅ Logged in as ${currentUser.role}: ${currentUser.firstName} ${currentUser.lastName}`);
-    }
-  };
-
-  const generateTestToken = async () => {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    
-    if (!currentUser.email) {
-      alert('No user data found');
-      return;
-    }
-    
-    try {
-      // Try to login with stored user data to get a fresh token
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          email: currentUser.email,
-          password: 'yourpassword' // You'll need to enter the correct password
-        })
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('currentUser', JSON.stringify(data.user));
-        alert('✅ Token generated! Try fetching teachers again.');
-        fetchTeachers();
-      } else {
-        alert('❌ Failed to generate token. Please login manually.');
-        navigate('/login');
-      }
-    } catch (error) {
-      console.error('Error generating token:', error);
-      alert('❌ Error generating token. Please login manually.');
-      navigate('/login');
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
@@ -578,10 +284,10 @@ export default function EnhancedTeacherPlatform() {
       <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white py-12 px-6">
         <div className="max-w-7xl mx-auto text-center">
           <h1 className="text-5xl font-bold mb-4 animate-pulse">
-            🌟 Find Your Perfect Teacher 🌟
+            🌟 Premium Teacher Hub 🌟
           </h1>
           <p className="text-xl opacity-90 mb-8">
-            Discover qualified educators and transform your learning journey
+            Discover exceptional educators and transform your learning journey
           </p>
           
           {/* Advanced Search Bar */}
@@ -607,8 +313,32 @@ export default function EnhancedTeacherPlatform() {
       </div>
 
       <div className="max-w-7xl mx-auto p-6">
+        {/* Favourites Toggle */}
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={() => setShowFavouritesOnly(fav => !fav)}
+            className={`px-4 py-2 rounded-lg font-semibold border transition-all duration-200 ${showFavouritesOnly ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50'}`}
+          >
+            {showFavouritesOnly ? 'Show All Teachers' : 'Show Favourites'}
+          </button>
+        </div>
+        {/* Loading State */}
+        {loading && (
+          <div className="flex flex-col items-center justify-center p-12 bg-white rounded-3xl shadow-lg border border-gray-200">
+            <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
+            <p className="mt-4 text-gray-600">Loading teachers...</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <div className="flex items-center justify-center p-12 bg-white rounded-3xl shadow-lg border border-gray-200 text-red-500">
+            <p>{error}</p>
+          </div>
+        )}
+
         {/* Advanced Filters Panel */}
-        {showFilters && (
+        {showFilters && !loading && !error && (
           <div className="bg-white rounded-2xl shadow-xl p-6 mb-8 border border-gray-100 transform transition-all duration-300">
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div>
@@ -646,7 +376,6 @@ export default function EnhancedTeacherPlatform() {
                   onChange={(e) => setSortBy(e.target.value)}
                   className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 >
-                  <option value="rating">Highest Rated</option>
                   <option value="experience">Most Experienced</option>
                   <option value="fee-low">Price: Low to High</option>
                   <option value="fee-high">Price: High to Low</option>
@@ -660,7 +389,7 @@ export default function EnhancedTeacherPlatform() {
                   <input
                     type="number"
                     value={priceRange[0]}
-                    onChange={(e) => setPriceRange([parseInt(e.target.value) || 0, priceRange[1]])}
+                    onChange={(e) => setPriceRange([parseInt(e.target.value), priceRange[1]])}
                     className="w-20 p-2 border border-gray-200 rounded-lg"
                     placeholder="Min"
                   />
@@ -668,7 +397,7 @@ export default function EnhancedTeacherPlatform() {
                   <input
                     type="number"
                     value={priceRange[1]}
-                    onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 1000])}
+                    onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
                     className="w-20 p-2 border border-gray-200 rounded-lg"
                     placeholder="Max"
                   />
@@ -679,209 +408,199 @@ export default function EnhancedTeacherPlatform() {
         )}
 
         {/* Results Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center space-x-4">
-            <h2 className="text-2xl font-bold text-gray-800">
-              {filteredAndSortedTeachers.length} Teachers Found
-            </h2>
-            {teachers.length === 0 && !loading && (
-              <div className="text-sm text-amber-600 bg-amber-50 px-3 py-1 rounded-full">
-                No teachers are currently listed
+        {!loading && !error && (
+          <>
+            <div className="flex justify-between items-center mb-8">
+              <div className="flex items-center space-x-4">
+                <h2 className="text-2xl font-bold text-gray-800">
+                  {filteredAndSortedTeachers.length} Teachers Found
+                </h2>
+                <div className="text-sm text-gray-500">
+                  {bookings.length} Active Bookings
+                </div>
               </div>
-            )}
-          </div>
-          
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`p-2 rounded-lg transition-all ${viewMode === "grid" ? "bg-indigo-600 text-white" : "bg-gray-100 hover:bg-gray-200"}`}
-            >
-              <div className="grid grid-cols-2 gap-1 w-4 h-4">
-                <div className="bg-current rounded-sm"></div>
-                <div className="bg-current rounded-sm"></div>
-                <div className="bg-current rounded-sm"></div>
-                <div className="bg-current rounded-sm"></div>
+              
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => setViewMode("grid")}
+                  className={`p-2 rounded-lg transition-all ${viewMode === "grid" ? "bg-indigo-600 text-white" : "bg-gray-100 hover:bg-gray-200"}`}
+                >
+                  <div className="grid grid-cols-2 gap-1 w-4 h-4">
+                    <div className="bg-current rounded-sm"></div>
+                    <div className="bg-current rounded-sm"></div>
+                    <div className="bg-current rounded-sm"></div>
+                    <div className="bg-current rounded-sm"></div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`p-2 rounded-lg transition-all ${viewMode === "list" ? "bg-indigo-600 text-white" : "bg-gray-100 hover:bg-gray-200"}`}
+                >
+                  <div className="space-y-1 w-4 h-4">
+                    <div className="bg-current h-1 rounded"></div>
+                    <div className="bg-current h-1 rounded"></div>
+                    <div className="bg-current h-1 rounded"></div>
+                  </div>
+                </button>
               </div>
-            </button>
-            <button
-              onClick={() => setViewMode("list")}
-              className={`p-2 rounded-lg transition-all ${viewMode === "list" ? "bg-indigo-600 text-white" : "bg-gray-100 hover:bg-gray-200"}`}
-            >
-              <div className="space-y-1 w-4 h-4">
-                <div className="bg-current h-1 rounded"></div>
-                <div className="bg-current h-1 rounded"></div>
-                <div className="bg-current h-1 rounded"></div>
-              </div>
-            </button>
-          </div>
-        </div>
+            </div>
 
-        {/* Teachers Grid/List */}
-        <div className={`${viewMode === "grid" ? "grid md:grid-cols-2 lg:grid-cols-3 gap-8" : "space-y-6"}`}>
-          {filteredAndSortedTeachers.map((teacher, index) => (
-            <div
-              key={teacher.id}
-              className={`group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-indigo-200 transform hover:-translate-y-2 ${
-                viewMode === "list" ? "flex" : ""
-              }`}
-              style={{ animationDelay: `${index * 100}ms` }}
-            >
-              <div className={`${viewMode === "list" ? "flex-shrink-0 w-48" : ""} relative`}>
-                <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-6 text-white relative overflow-hidden">
-                  <div className="absolute inset-0 bg-black/10 group-hover:bg-black/5 transition-all duration-300"></div>
-                  <div className="relative z-10">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="text-4xl">
-                        {teacher.profilePicture ? (
-                          <img 
-                            src={teacher.profilePicture} 
-                            alt={teacher.name}
-                            className="w-12 h-12 rounded-full object-cover border-2 border-white/20"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-xl font-bold">
-                            {teacher.avatar}
+            {/* Teachers Grid/List */}
+            <div className={`${viewMode === "grid" ? "grid md:grid-cols-2 lg:grid-cols-3 gap-8" : "space-y-6"}`}>
+              {filteredAndSortedTeachers.map((teacher, index) => (
+                <div
+                  key={teacher.id}
+                  className={`group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-indigo-200 transform hover:-translate-y-2 ${
+                    viewMode === "list" ? "flex" : ""
+                  }`}
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
+                  <div className={`${viewMode === "list" ? "flex-shrink-0 w-48" : ""} relative`}>
+                    <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-6 text-white relative overflow-hidden">
+                      <div className="absolute inset-0 bg-black/10 group-hover:bg-black/5 transition-all duration-300"></div>
+                      <div className="relative z-10">
+                        <div className="flex items-center justify-between mb-3">
+                          {teacher.profilePicture ? (
+                            <img 
+                              src={teacher.profilePicture} 
+                              alt={teacher.name} 
+                              className="w-16 h-16 rounded-full object-cover border-2 border-white"
+                            />
+                          ) : (
+                            <div className="text-4xl w-16 h-16 rounded-full bg-white/20 flex items-center justify-center">
+                              {getTeacherAvatar(teacher)}
+                            </div>
+                          )}
+                          <div className="flex items-center space-x-2">
+                            {teacher.verified && (
+                              <div className="bg-green-500 rounded-full p-1">
+                                <Check className="w-3 h-3 text-white" />
+                              </div>
+                            )}
+                            <button
+                              onClick={() => toggleFavorite(teacher.id)}
+                              className="hover:scale-110 transition-transform duration-200"
+                            >
+                              <Heart
+                                className={`w-5 h-5 ${
+                                  favorites.includes(teacher.id)
+                                    ? "fill-red-500 text-red-500"
+                                    : "text-white/70 hover:text-white"
+                                }`}
+                              />
+                            </button>
                           </div>
-                        )}
+                        </div>
+                        <h3 className="text-xl font-bold mb-1">{teacher.name}</h3>
+                        <p className="text-white/90 text-sm">{teacher.bio}</p>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        {teacher.verified && (
-                          <div className="bg-green-500 rounded-full p-1">
-                            <Check className="w-3 h-3 text-white" />
+                    </div>
+
+                    {viewMode === "grid" && teacher.rating > 0 && (
+                      <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 flex items-center space-x-1">
+                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                        <span className="text-sm font-semibold">{teacher.rating}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className={`p-6 ${viewMode === "list" ? "flex-1" : ""}`}>
+                    <div className={`${viewMode === "list" ? "flex justify-between items-start" : ""}`}>
+                      <div className={`${viewMode === "list" ? "flex-1 pr-6" : ""}`}>
+                        {viewMode === "list" && (
+                          <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-xl font-bold text-gray-800">{teacher.name}</h3>
+                            {teacher.rating > 0 && (
+                              <div className="flex items-center space-x-1">
+                                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                                <span className="text-sm font-semibold">{teacher.rating}</span>
+                              </div>
+                            )}
                           </div>
                         )}
+
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div className="flex items-center space-x-2 text-gray-600">
+                            <BookOpen className="w-4 h-4 text-indigo-500" />
+                            <span className="text-sm">{teacher.subject}</span>
+                          </div>
+                          <div className="flex items-center space-x-2 text-gray-600">
+                            <Award className="w-4 h-4 text-purple-500" />
+                            <span className="text-sm">{teacher.board}</span>
+                          </div>
+                          <div className="flex items-center space-x-2 text-gray-600">
+                            <Clock className="w-4 h-4 text-green-500" />
+                            <span className="text-sm">{teacher.experience}y exp</span>
+                          </div>
+                          <div className="flex items-center space-x-2 text-gray-600">
+                            <Users className="w-4 h-4 text-blue-500" />
+                            <span className="text-sm">{teacher.totalStudents} students</span>
+                          </div>
+                        </div>
+
+                        <div className="mb-4">
+                          <div className="text-xs text-gray-500 mb-1">Specializations</div>
+                          <div className="flex flex-wrap gap-1">
+                            {teacher.specializations.slice(0, 3).map((spec, i) => (
+                              <span
+                                key={i}
+                                className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded-full text-xs font-medium"
+                              >
+                                {spec}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="mb-4">
+                          <div className="text-xs text-gray-500 mb-1">Available</div>
+                          <div className="flex space-x-1">
+                            {teacher.availability.map((day, i) => (
+                              <span
+                                key={i}
+                                className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs"
+                              >
+                                {day}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className={`${viewMode === "list" ? "text-right" : ""}`}>
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center space-x-2 text-gray-600">
+                            <MapPin className="w-4 h-4 text-red-500" />
+                            <span className="text-sm">{teacher.location}</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-gray-800">₹{teacher.fee}</div>
+                            <div className="text-xs text-gray-500">per hour</div>
+                          </div>
+                        </div>
+
                         <button
-                          onClick={() => toggleFavorite(teacher.id)}
-                          className="hover:scale-110 transition-transform duration-200"
+                          onClick={() => handleBook(teacher)}
+                          className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 flex items-center justify-center space-x-2 group"
                         >
-                          <Heart
-                            className={`w-5 h-5 ${
-                              favorites.includes(teacher.id)
-                                ? "fill-red-500 text-red-500"
-                                : "text-white/70 hover:text-white"
-                            }`}
-                          />
+                          <Calendar className="w-4 h-4 group-hover:animate-pulse" />
+                          <span>Book Session</span>
                         </button>
                       </div>
                     </div>
-                    <h3 className="text-xl font-bold mb-1">{teacher.name}</h3>
-                    <p className="text-white/90 text-sm">{teacher.bio}</p>
                   </div>
                 </div>
-
-                {viewMode === "grid" && (
-                  <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 flex items-center space-x-1">
-                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-sm font-semibold">{teacher.rating}</span>
-                  </div>
-                )}
-              </div>
-
-              <div className={`p-6 ${viewMode === "list" ? "flex-1" : ""}`}>
-                <div className={`${viewMode === "list" ? "flex justify-between items-start" : ""}`}>
-                  <div className={`${viewMode === "list" ? "flex-1 pr-6" : ""}`}>
-                    {viewMode === "list" && (
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-xl font-bold text-gray-800">{teacher.name}</h3>
-                        <div className="flex items-center space-x-1">
-                          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                          <span className="text-sm font-semibold">{teacher.rating}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div className="flex items-center space-x-2 text-gray-600">
-                        <BookOpen className="w-4 h-4 text-indigo-500" />
-                        <span className="text-sm">{teacher.subject}</span>
-                      </div>
-                      <div className="flex items-center space-x-2 text-gray-600">
-                        <Award className="w-4 h-4 text-purple-500" />
-                        <span className="text-sm">{teacher.board}</span>
-                      </div>
-                      <div className="flex items-center space-x-2 text-gray-600">
-                        <Clock className="w-4 h-4 text-green-500" />
-                        <span className="text-sm">{teacher.experience}y exp</span>
-                      </div>
-                      <div className="flex items-center space-x-2 text-gray-600">
-                        <Users className="w-4 h-4 text-blue-500" />
-                        <span className="text-sm">{teacher.totalStudents} students</span>
-                      </div>
-                    </div>
-
-                    <div className="mb-4">
-                      <div className="text-xs text-gray-500 mb-1">Specializations</div>
-                      <div className="flex flex-wrap gap-1">
-                        {teacher.specializations.slice(0, 3).map((spec, i) => (
-                          <span
-                            key={i}
-                            className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded-full text-xs font-medium"
-                          >
-                            {spec}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="mb-4">
-                      <div className="text-xs text-gray-500 mb-1">Available</div>
-                      <div className="flex space-x-1">
-                        {teacher.availability.map((day, i) => (
-                          <span
-                            key={i}
-                            className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs"
-                          >
-                            {day}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className={`${viewMode === "list" ? "text-right" : ""}`}>
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center space-x-2 text-gray-600">
-                        <MapPin className="w-4 h-4 text-red-500" />
-                        <span className="text-sm">{teacher.location}</span>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-gray-800">₹{teacher.fee}</div>
-                        <div className="text-xs text-gray-500">per hour</div>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => handleBook(teacher)}
-                      className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 flex items-center justify-center space-x-2 group"
-                    >
-                      <Calendar className="w-4 h-4 group-hover:animate-pulse" />
-                      <span>Book Session</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        {filteredAndSortedTeachers.length === 0 && !loading && (
-          <div className="text-center py-16">
-            <div className="text-6xl mb-4">👩‍🏫</div>
-            <h3 className="text-2xl font-bold text-gray-800 mb-2">No teachers found</h3>
-            <p className="text-gray-600 mb-4">
-              {teachers.length === 0 
-                ? "No teachers are currently listed. Be the first to register as a teacher!" 
-                : "Try adjusting your search criteria"}
-            </p>
-            {teachers.length === 0 && (
-              <button
-                onClick={() => navigate('/teacher/dashboard')}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200"
-              >
-                Become a Teacher
-              </button>
+            {filteredAndSortedTeachers.length === 0 && (
+              <div className="text-center py-16">
+                <div className="text-6xl mb-4">🔍</div>
+                <h3 className="text-2xl font-bold text-gray-800 mb-2">No teachers found</h3>
+                <p className="text-gray-600">Try adjusting your search criteria</p>
+              </div>
             )}
-          </div>
+          </>
         )}
       </div>
 
@@ -913,7 +632,6 @@ export default function EnhancedTeacherPlatform() {
                   type="date"
                   value={bookingForm.date}
                   onChange={(e) => setBookingForm({...bookingForm, date: e.target.value})}
-                  min={new Date().toISOString().split('T')[0]}
                   className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                 />
               </div>
