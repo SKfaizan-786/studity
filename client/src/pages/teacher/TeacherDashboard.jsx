@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
   CalendarDays, Users, DollarSign, LogOut, UserRound, ArrowRight, CheckCircle,
-  Wallet, ListChecks, LayoutDashboard, Settings, Loader2, Info, XCircle, Bell, MessageSquare, Award, MonitorCheck
+  Wallet, ListChecks, LayoutDashboard, Settings, Loader2, Info, XCircle, Bell, MessageSquare, Award, MonitorCheck, GraduationCap
 } from 'lucide-react';
 
 // Import your storage utility functions
@@ -82,12 +82,15 @@ const seedTeacherDashboardData = () => {
  * @param {{ icon: React.ElementType, title: string, children: React.ReactNode, className?: string }} props
  */
 const DashboardCard = ({ icon: Icon, title, children, className = '' }) => (
-  <div className={`relative bg-white/90 shadow-lg p-6 rounded-2xl border border-gray-200 overflow-hidden
-    transform hover:scale-[1.02] transition-all duration-300 hover:shadow-purple-400/40 ${className}`}>
-    <div className="relative z-10 flex flex-col h-full">
-      <div className="flex items-center gap-3 mb-4">
-        {Icon && <Icon className="w-8 h-8 text-purple-600" />}
-        <h2 className="text-2xl font-bold text-slate-800">{title}</h2>
+  <div className={`relative bg-white/60 backdrop-blur-sm shadow-xl p-6 rounded-2xl border border-white/40 overflow-hidden
+    transform hover:scale-[1.02] transition-all duration-300 hover:shadow-purple-400/30 hover:bg-white/70 ${className}`}>
+    {/* Background Pattern */}
+    <div className="absolute inset-0 bg-gradient-to-br from-purple-50/20 to-violet-50/20 opacity-50"></div>
+    
+    <div className="relative z-10 flex flex-col h-full min-h-[280px]">
+      <div className="flex items-center gap-3 mb-6">
+        {Icon && <Icon className="w-6 h-6 text-purple-600" />}
+        <h2 className="text-lg font-semibold text-slate-800">{title}</h2>
       </div>
       <div className="flex-grow flex flex-col justify-center">
         {children}
@@ -101,9 +104,9 @@ const DashboardCard = ({ icon: Icon, title, children, className = '' }) => (
  * @param {{ label: string, value: string | number, valueClassName?: string }} props
  */
 const StatRow = ({ label, value, valueClassName = 'text-purple-700' }) => (
-  <div className="flex items-center justify-between p-3 bg-gray-100 rounded-lg shadow-inner border border-gray-200">
-    <span className="text-slate-700 font-medium">{label}:</span>
-    <span className={`text-xl font-bold ${valueClassName}`}>{value}</span>
+  <div className="flex items-center justify-between p-4 bg-white/40 backdrop-blur-sm rounded-xl border border-white/30 hover:bg-white/50 transition-all duration-200">
+    <span className="text-slate-700 font-medium text-sm">{label}:</span>
+    <span className={`text-lg font-bold ${valueClassName}`}>{value}</span>
   </div>
 );
 
@@ -323,52 +326,71 @@ export default function TeacherDashboard() {
         </div>
       )}
 
-      <header className="text-center mb-10">
-        <div className="flex items-center justify-center gap-4 mb-4">
-          {/* Teacher Profile Image */}
-          <div className="relative animate-float">
-            <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-purple-400 shadow-lg bg-gray-200 hover:border-purple-300 transition-all duration-300">
-              {currentUser?.teacherProfileData?.photoUrl || currentUser?.teacherProfile?.photoUrl ? (
-                <img
-                  src={currentUser.teacherProfileData?.photoUrl || currentUser.teacherProfile?.photoUrl}
-                  alt={`${currentUser?.firstName} ${currentUser?.lastName}`}
-                  className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-400 to-violet-500 text-white text-2xl font-bold">
-                  {currentUser?.firstName ? currentUser.firstName.charAt(0).toUpperCase() : 'T'}
-                </div>
-              )}
+      <header className="mb-12">
+        {/* Top Navigation Bar */}
+        <div className="flex items-center justify-between mb-8 p-4 bg-white/30 backdrop-blur-sm rounded-2xl border border-white/40 shadow-sm">
+          {/* Left Side - Yuvshiksha Branding */}
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-violet-600 rounded-xl flex items-center justify-center transform group-hover:scale-105 transition-all duration-300">
+              <GraduationCap className="w-6 h-6 text-white" />
             </div>
-            {/* Online Status Indicator */}
-            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 border-2 border-white rounded-full flex items-center justify-center animate-pulse-slow">
-              <div className="w-2 h-2 bg-white rounded-full"></div>
+            <div>
+              <h1 className="text-xl font-bold text-slate-900 group-hover:text-purple-600 transition-colors duration-200">Yuvshiksha</h1>
+              <p className="text-slate-600 text-xs group-hover:text-slate-700 transition-colors duration-200">Teacher Portal</p>
             </div>
-          </div>
+          </Link>
 
-          {/* Header Text */}
-          <div className="text-left">
-            <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-violet-400 flex items-center gap-3">
-              <LayoutDashboard className="w-10 h-10 text-purple-400" /> Teacher Dashboard
-            </h1>
-            <p className="text-gray-400 mt-2 text-lg">
-              Welcome back, <span className="font-semibold text-purple-300">{currentUser?.firstName ? `${currentUser.firstName} ${currentUser.lastName || ''}` : 'Teacher'}!</span>
-            </p>
-            <p className="text-gray-500 text-sm">{currentUser?.email}</p>
+          {/* Right Side - User Actions */}
+          <div className="flex items-center gap-4">
+            {/* User Info */}
+            <div className="text-right hidden sm:block">
+              <p className="text-slate-700 font-medium text-sm">{currentUser?.firstName ? `${currentUser.firstName} ${currentUser.lastName || ''}` : 'Teacher'}</p>
+              <p className="text-slate-500 text-xs">{currentUser?.email}</p>
+            </div>
+            
+            {/* Profile Avatar */}
+            <div className="relative">
+              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-purple-400 shadow-sm bg-gray-200 hover:border-purple-300 transition-all duration-300">
+                {currentUser?.teacherProfileData?.photoUrl || currentUser?.teacherProfile?.photoUrl ? (
+                  <img
+                    src={currentUser.teacherProfileData?.photoUrl || currentUser.teacherProfile?.photoUrl}
+                    alt={`${currentUser?.firstName} ${currentUser?.lastName}`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-400 to-violet-500 text-white text-sm font-bold">
+                    {currentUser?.firstName ? currentUser.firstName.charAt(0).toUpperCase() : 'T'}
+                  </div>
+                )}
+              </div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border border-white rounded-full"></div>
+            </div>
+
+            {/* Logout Button */}
+            <button
+              onClick={() => {
+                setToLocalStorage('currentUser', null);
+                localStorage.removeItem('token');
+                navigate('/login');
+              }}
+              className="px-4 py-2 bg-white/60 backdrop-blur-sm text-slate-700 rounded-lg hover:bg-white/80 transition-colors duration-200 flex items-center gap-2 shadow-sm border border-white/40 text-sm"
+            >
+              <LogOut className="w-4 h-4" /> Logout
+            </button>
           </div>
         </div>
 
-        <div className="flex justify-center mt-4">
-          <button
-            onClick={() => {
-              setToLocalStorage('currentUser', null); // Clear current user
-              localStorage.removeItem('token'); // Also remove the token
-              navigate('/login');
-            }}
-            className="px-6 py-2 bg-white/60 backdrop-blur-sm text-slate-700 rounded-lg hover:bg-white/80 transition-colors duration-200 flex items-center gap-2 shadow-sm border border-white/40"
-          >
-            <LogOut className="w-5 h-5" /> Logout
-          </button>
+        {/* Main Dashboard Title */}
+        <div className="text-center">
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <LayoutDashboard className="w-8 h-8 text-purple-400" />
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-violet-400">
+              Teacher Dashboard
+            </h2>
+          </div>
+          <p className="text-gray-600 text-lg mb-6">
+            Welcome back, <span className="font-semibold text-purple-600">{currentUser?.firstName ? `${currentUser.firstName}!` : 'Teacher!'}</span>
+          </p>
         </div>
       </header>
 
@@ -390,37 +412,40 @@ export default function TeacherDashboard() {
         </section>
       )}
 
-      <main className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+      <main className="max-w-7xl mx-auto px-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 xl:gap-8">
 
         {/* Listing Status Card */}
         <DashboardCard icon={ListChecks} title="Listing Status">
           <div className="text-center flex flex-col items-center justify-center h-full space-y-4">
             {isListed ? (
               <>
-                <CheckCircle className="w-16 h-16 text-emerald-500 mb-3 animate-fade-in" />
-                <p className="text-emerald-400 font-bold text-xl">You are Listed!</p>
-                <p className="text-gray-400 text-sm mt-1">Students can now find and book you.</p>
+                <CheckCircle className="w-12 h-12 text-emerald-500 mb-3 animate-fade-in" />
+                <p className="text-emerald-600 font-bold text-lg">You are Listed!</p>
+                <p className="text-slate-600 text-sm mt-1">Students can now find and book you.</p>
                 {teacherProfile.listedAt && (
-                  <p className="text-gray-500 text-xs mt-2">Listed since: {new Date(teacherProfile.listedAt).toLocaleDateString()}</p>
+                  <p className="text-slate-500 text-xs mt-2 bg-white/40 backdrop-blur-sm px-3 py-1 rounded-full border border-white/30">
+                    Listed since: {new Date(teacherProfile.listedAt).toLocaleDateString()}
+                  </p>
                 )}
               </>
             ) : (
               <>
-                <Info className="w-16 h-16 text-amber-500 mb-3 animate-fade-in" />
-                <p className="text-amber-400 font-bold text-xl">Not Yet Listed</p>
-                <p className="text-gray-400 text-sm mt-1 mb-4">Appear in searches and receive bookings.</p>
+                <Info className="w-12 h-12 text-amber-500 mb-3 animate-fade-in" />
+                <p className="text-amber-600 font-bold text-lg">Not Yet Listed</p>
+                <p className="text-slate-600 text-sm mt-1 mb-4">Appear in searches and receive bookings.</p>
                 <button
                   onClick={handleGetListed}
                   disabled={isProcessingListing || !isProfileComplete}
                   title={getListingButtonTooltip()}
-                  className={`mt-4 px-6 py-3 rounded-xl text-white font-semibold flex items-center gap-2.5 transition-all duration-300 shadow-lg
-                    disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed disabled:shadow-none disabled:transform-none
-                    ${isProfileComplete ? 'bg-gradient-to-r from-emerald-600 to-green-700 hover:from-emerald-700 hover:to-green-800 transform hover:scale-105' : 'bg-gray-700'}`}
+                  className={`mt-4 px-5 py-2.5 rounded-xl text-white font-medium flex items-center gap-2 transition-all duration-300 shadow-lg text-sm
+                    disabled:bg-gray-600 disabled:text-gray-400 disabled:cursor-not-allowed disabled:shadow-none disabled:transform-none
+                    ${isProfileComplete ? 'bg-gradient-to-r from-emerald-600 to-green-700 hover:from-emerald-700 hover:to-green-800 transform hover:scale-105' : 'bg-gray-600'}`}
                 >
                   {isProcessingListing ? (
-                    <> <Loader2 className="w-5 h-5 animate-spin" /> Processing... </>
+                    <> <Loader2 className="w-4 h-4 animate-spin" /> Processing... </>
                   ) : (
-                    <> <Wallet className="w-5 h-5" /> Get Listed (₹{LISTING_FEE} Fee) </>
+                    <> <Wallet className="w-4 h-4" /> Get Listed (₹{LISTING_FEE} Fee) </>
                   )}
                 </button>
               </>
@@ -442,9 +467,9 @@ export default function TeacherDashboard() {
               />
               {/* Info message when no data */}
               {stats.upcomingSessions === 0 && stats.newInquiries === 0 && stats.totalEarnings === 0 && (
-                <div className="mt-4 p-2 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-blue-700 text-xs font-medium flex items-center gap-1 whitespace-nowrap overflow-x-auto">
-                    <Info className="w-4 h-4 text-blue-400" />
+                <div className="mt-4 p-3 bg-blue-100/50 backdrop-blur-sm border border-blue-200/60 rounded-xl">
+                  <p className="text-blue-700 text-xs font-medium flex items-center gap-2">
+                    <Info className="w-4 h-4 text-blue-500" />
                     Data will update when you receive bookings and inquiries.
                   </p>
                 </div>
@@ -466,10 +491,10 @@ export default function TeacherDashboard() {
               <li key={path}>
                 <button
                   onClick={() => navigate(path)}
-                  className="w-full flex items-center gap-4 p-4 bg-gray-100 text-slate-800 rounded-lg hover:bg-gray-200 hover:text-purple-700 transition-all duration-200 font-semibold shadow-sm hover:shadow-md transform hover:scale-[1.01]"
+                  className="w-full flex items-center gap-3 p-3 bg-white/40 backdrop-blur-sm text-slate-800 rounded-xl hover:bg-white/60 hover:text-purple-700 transition-all duration-200 font-medium border border-white/30 hover:border-white/50 transform hover:scale-[1.01] shadow-sm hover:shadow-md"
                 >
-                  <Icon className="w-6 h-6 text-purple-400" />
-                  <span>{label}</span>
+                  <Icon className="w-5 h-5 text-purple-500" />
+                  <span className="text-sm">{label}</span>
                 </button>
               </li>
             ))}
@@ -478,19 +503,19 @@ export default function TeacherDashboard() {
 
         {/* Recent Bookings/Sessions Card */}
         {/* TODO: Implement GET /api/teacher/bookings/recent endpoint */}
-        <DashboardCard icon={MonitorCheck} title="Recent Activity" className="md:col-span-2 xl:col-span-3">
-          <h3 className="text-xl font-semibold text-gray-200 mb-4">Latest Bookings</h3>
-          <div className="space-y-4 max-h-60 overflow-y-auto custom-scrollbar">
+        <DashboardCard icon={MonitorCheck} title="Recent Activity" className="lg:col-span-3">
+          <div className="space-y-4 max-h-56 overflow-y-auto custom-scrollbar">
             {/* TODO: Replace with actual booking data from backend */}
             <div className="text-center py-8">
-              <MonitorCheck className="w-16 h-16 text-gray-500 mx-auto mb-4 opacity-50" />
-              <p className="text-gray-400 text-lg font-medium">No bookings yet</p>
-              <p className="text-gray-500 text-sm mt-2">
+              <MonitorCheck className="w-12 h-12 text-slate-400 mx-auto mb-4 opacity-60" />
+              <p className="text-slate-600 text-lg font-medium">No bookings yet</p>
+              <p className="text-slate-500 text-sm mt-2">
                 When students book sessions with you, they'll appear here.
               </p>
             </div>
           </div>
         </DashboardCard>
+        </div>
       </main>
 
       {/* Tailwind CSS Custom Scrollbar and Animation Definitions */}

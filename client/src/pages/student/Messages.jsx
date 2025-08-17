@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSocket } from '../../contexts/SocketContext';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
+import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { 
   MessageCircle, 
   Send, 
   Search, 
-  Phone, 
-  Video, 
-  MoreVertical,
   ArrowLeft,
   Check,
   CheckCheck,
@@ -19,6 +17,7 @@ import API_CONFIG from '../../config/api';
 const Messages = () => {
   const { socket, isConnected } = useSocket();
   const location = useLocation();
+  const isOnline = useOnlineStatus();
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -26,6 +25,8 @@ const Messages = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [queuedMessages, setQueuedMessages] = useState([]);
+  const [showOfflineNotice, setShowOfflineNotice] = useState(false);
   const messagesEndRef = useRef(null);
   const [currentUser, setCurrentUser] = useState(null);
 
@@ -37,6 +38,65 @@ const Messages = () => {
       setCurrentUser(user);
     }
   }, []);
+
+  // Load queued messages from localStorage on component mount
+  useEffect(() => {
+    const saved = localStorage.getItem('queuedMessages');
+    if (saved) {
+      setQueuedMessages(JSON.parse(saved));
+    }
+  }, []);
+
+  // Save queued messages to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('queuedMessages', JSON.stringify(queuedMessages));
+  }, [queuedMessages]);
+
+  // Handle online/offline status changes
+  useEffect(() => {
+    if (isOnline && queuedMessages.length > 0) {
+      // Send all queued messages when coming back online
+      sendQueuedMessages();
+      // Fetch latest messages to get any received while offline
+      fetchConversations();
+      if (selectedConversation) {
+        fetchMessages(selectedConversation.participant._id);
+      }
+    }
+    
+    if (!isOnline) {
+      setShowOfflineNotice(true);
+      // Hide notice after 3 seconds
+      setTimeout(() => setShowOfflineNotice(false), 3000);
+    }
+  }, [isOnline]);
+
+  // Send queued messages when online
+  const sendQueuedMessages = async () => {
+    if (!socket || !isConnected || queuedMessages.length === 0) return;
+
+    for (const queuedMsg of queuedMessages) {
+      try {
+        socket.emit('send_message', queuedMsg);
+        // Add to local messages immediately for better UX
+        if (selectedConversation && queuedMsg.recipient === selectedConversation.participant._id) {
+          const localMessage = {
+            _id: 'temp_' + Date.now(),
+            sender: { _id: currentUser._id },
+            content: queuedMsg.content,
+            createdAt: new Date(),
+            isRead: false
+          };
+          setMessages(prev => [...prev, localMessage]);
+        }
+      } catch (error) {
+        console.error('Error sending queued message:', error);
+      }
+    }
+    
+    // Clear queue after sending
+    setQueuedMessages([]);
+  };
 
   // Handle incoming conversation from TeacherList
   useEffect(() => {
@@ -137,16 +197,44 @@ const Messages = () => {
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation || sendingMessage) return;
 
+    const messageData = {
+      sender: currentUser._id,
+      recipient: selectedConversation.participant._id,
+      content: newMessage.trim(),
+      messageType: 'text'
+    };
+
     setSendingMessage(true);
     try {
-      if (socket && isConnected) {
-        socket.emit('send_message', {
-          sender: currentUser._id,
-          recipient: selectedConversation.participant._id,
-          content: newMessage.trim(),
-          messageType: 'text'
-        });
+      if (isOnline && socket && isConnected) {
+        // Send immediately if online
+        socket.emit('send_message', messageData);
         setNewMessage('');
+      } else {
+        // Queue message if offline
+        const queuedMessage = {
+          ...messageData,
+          queuedAt: new Date().toISOString(),
+          tempId: 'queued_' + Date.now()
+        };
+        
+        setQueuedMessages(prev => [...prev, queuedMessage]);
+        
+        // Add to local messages immediately for better UX
+        const localMessage = {
+          _id: queuedMessage.tempId,
+          sender: { _id: currentUser._id },
+          content: messageData.content,
+          createdAt: new Date(),
+          isRead: false,
+          status: 'queued' // Mark as queued
+        };
+        setMessages(prev => [...prev, localMessage]);
+        setNewMessage('');
+        
+        // Show queued notification
+        setShowOfflineNotice(true);
+        setTimeout(() => setShowOfflineNotice(false), 3000);
       }
     } catch (error) {
       console.error('Error sending message:', error);
@@ -206,77 +294,112 @@ const Messages = () => {
 
       <div className="relative z-10 h-screen flex">
         {/* Conversations Sidebar */}
-        <div className={`${selectedConversation ? 'hidden lg:flex' : 'flex'} w-full lg:w-1/3 xl:w-1/4 flex-col bg-white/60 backdrop-blur-sm border-r border-white/20`}>
+        <div className={`${selectedConversation ? 'hidden lg:flex' : 'flex'} w-full lg:w-1/3 xl:w-1/4 flex-col bg-white/90 backdrop-blur-xl border-r-2 border-violet-200/50 shadow-2xl relative`}>
+          {/* Sidebar Background Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-50/80 via-blue-50/60 to-purple-50/80 rounded-l-none"></div>
+          
           {/* Header */}
-          <div className="p-4 border-b border-white/20">
-            <div className="flex items-center justify-between mb-4">
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Messages
-              </h1>
+          <div className="relative z-10 p-4 border-b-2 border-violet-200/30 bg-white/50 backdrop-blur-sm">
+            {/* Top Row - Back Button and Status */}
+            <div className="flex items-center justify-between mb-3">
+              {/* Back Button */}
+              <Link
+                to="/student/dashboard"
+                className="inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-full hover:from-violet-700 hover:to-indigo-700 transition-all duration-200 shadow-md text-sm font-medium"
+                title="Go to Dashboard"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">Dashboard</span>
+              </Link>
+              
+              {/* Status Indicator */}
               <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span className="text-xs text-gray-600">
-                  {isConnected ? 'Online' : 'Offline'}
+                <div className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-red-500'} shadow-sm`}></div>
+                <span className={`text-xs font-medium ${isOnline ? 'text-green-700' : 'text-red-700'}`}>
+                  {isOnline ? 'Online' : 'Offline'}
                 </span>
               </div>
             </div>
             
+            {/* Title Row */}
+            <div className="mb-4 text-center">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-violet-700 to-indigo-700 bg-clip-text text-transparent">
+                Messages
+              </h1>
+            </div>
+            
             {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500 w-5 h-5" />
               <input
                 type="text"
                 placeholder="Search conversations..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-white/50 border border-white/30 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-3 bg-white/80 border-2 border-violet-200/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-all duration-200 shadow-sm"
               />
             </div>
           </div>
 
+          {/* Offline/Queued Messages Notification */}
+          {(showOfflineNotice || (!isOnline && queuedMessages.length > 0)) && (
+            <div className="relative z-10 p-3 bg-gradient-to-r from-orange-100 to-yellow-100 border-l-4 border-orange-500">
+              <div className="flex items-center space-x-2">
+                <Clock className="w-4 h-4 text-orange-600" />
+                <span className="text-sm font-medium text-orange-800">
+                  {!isOnline && queuedMessages.length > 0 
+                    ? `${queuedMessages.length} message(s) queued - will send when online`
+                    : "You're offline - messages will be queued"}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Conversations List */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="relative z-10 flex-1 overflow-y-auto bg-white/20 backdrop-blur-sm">
             {filteredConversations.length === 0 ? (
               <div className="p-8 text-center">
-                <MessageCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">No conversations yet</p>
-                <p className="text-sm text-gray-500 mt-2">Start a conversation from the Find Teachers page</p>
+                <div className="w-16 h-16 bg-gradient-to-br from-violet-500 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                  <MessageCircle className="w-8 h-8 text-white" />
+                </div>
+                <p className="text-slate-700 font-medium text-lg mb-2">No conversations yet</p>
+                <p className="text-sm text-slate-600">Start a conversation from the Find Teachers page</p>
               </div>
             ) : (
               filteredConversations.map((conversation) => (
                 <div
                   key={conversation.participant._id}
                   onClick={() => handleSelectConversation(conversation)}
-                  className={`p-4 border-b border-white/10 cursor-pointer transition-all duration-200 hover:bg-white/30 ${
+                  className={`p-4 border-b border-violet-100/50 cursor-pointer transition-all duration-200 hover:bg-white/40 hover:shadow-md ${
                     selectedConversation?.participant._id === conversation.participant._id 
-                      ? 'bg-blue-50/50 border-l-4 border-l-blue-500' 
+                      ? 'bg-violet-100/60 border-l-4 border-l-violet-500 shadow-sm' 
                       : ''
                   }`}
                 >
                   <div className="flex items-center space-x-3">
                     {/* Avatar */}
                     <div className="relative">
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
+                      <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-indigo-500 rounded-full flex items-center justify-center text-white font-semibold shadow-lg">
                         {conversation.participant.firstName[0]}{conversation.participant.lastName[0]}
                       </div>
-                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full shadow-sm"></div>
                     </div>
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium text-gray-900 truncate">
+                        <p className="text-sm font-semibold text-slate-800 truncate">
                           {conversation.participant.firstName} {conversation.participant.lastName}
                         </p>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-slate-600 font-medium">
                           {formatTime(conversation.lastMessage.createdAt)}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm text-gray-600 truncate">
+                      <div className="flex items-center justify-between mt-1">
+                        <p className="text-sm text-slate-600 truncate">
                           {conversation.lastMessage.content}
                         </p>
                         {conversation.unreadCount > 0 && (
-                          <span className="bg-blue-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+                          <span className="bg-gradient-to-r from-violet-500 to-indigo-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center font-medium shadow-sm">
                             {conversation.unreadCount}
                           </span>
                         )}
@@ -290,7 +413,7 @@ const Messages = () => {
         </div>
 
         {/* Chat Area */}
-        <div className={`${selectedConversation ? 'flex' : 'hidden lg:flex'} flex-1 flex-col`}>
+        <div className={`${selectedConversation ? 'flex' : 'hidden lg:flex'} flex-1 flex-col bg-white/50 backdrop-blur-sm`}>
           {selectedConversation ? (
             <>
               {/* Chat Header */}
@@ -311,18 +434,6 @@ const Messages = () => {
                     </h3>
                     <p className="text-sm text-green-600">Online</p>
                   </div>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <button className="p-2 hover:bg-white/30 rounded-full transition-colors">
-                    <Phone className="w-5 h-5 text-gray-600" />
-                  </button>
-                  <button className="p-2 hover:bg-white/30 rounded-full transition-colors">
-                    <Video className="w-5 h-5 text-gray-600" />
-                  </button>
-                  <button className="p-2 hover:bg-white/30 rounded-full transition-colors">
-                    <MoreVertical className="w-5 h-5 text-gray-600" />
-                  </button>
                 </div>
               </div>
 
@@ -354,7 +465,9 @@ const Messages = () => {
                           }`}>
                             <span className="text-xs">{formatTime(message.createdAt)}</span>
                             {isOwnMessage && (
-                              message.isRead ? (
+                              message.status === 'queued' ? (
+                                <Clock className="w-3 h-3 text-orange-400" title="Queued - will send when online" />
+                              ) : message.isRead ? (
                                 <CheckCheck className="w-3 h-3" />
                               ) : (
                                 <Check className="w-3 h-3" />
@@ -377,14 +490,18 @@ const Messages = () => {
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                    placeholder="Type a message..."
+                    placeholder={isOnline ? "Type a message..." : "Type a message... (will send when online)"}
                     className="flex-1 px-4 py-2 bg-white/70 border border-white/30 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-                    disabled={sendingMessage || !isConnected}
+                    disabled={sendingMessage}
                   />
                   <button
                     onClick={sendMessage}
-                    disabled={!newMessage.trim() || sendingMessage || !isConnected}
-                    className="p-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    disabled={!newMessage.trim() || sendingMessage}
+                    className={`p-2 text-white rounded-xl transition-colors ${
+                      isOnline 
+                        ? 'bg-blue-500 hover:bg-blue-600' 
+                        : 'bg-orange-500 hover:bg-orange-600'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     {sendingMessage ? (
                       <Clock className="w-5 h-5 animate-spin" />

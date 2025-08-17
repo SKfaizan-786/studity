@@ -3,27 +3,29 @@ import { useNavigate, Link } from 'react-router-dom';
 import {
   Home,
   Loader2,
-  BookOpen,
   Bell,
   Search,
   ChevronDown,
   ChevronUp,
   LogOut,
-  Settings,
-  HelpCircle,
   MessageSquare,
-  Award,
-  BookCheck,
-  UserRound,
-  Mail,
   User,
-  Star,
   ClipboardPenLine,
-  Lightbulb,
-  FileText,
-  Trophy,
-  Activity,
-  AwardIcon,
+  ChevronLeft,
+  ChevronRight,
+  Menu,
+  Calendar,
+  Clock,
+  Users,
+  Heart,
+  Video,
+  MapPin,
+  DollarSign,
+  TrendingUp,
+  Bookmark,
+  BookCheck,
+  Star,
+  GraduationCap,
   AlertTriangle
 } from 'lucide-react';
 
@@ -44,46 +46,55 @@ const getSampleStudentData = (firstName = 'Student') => {
     email: 'student@example.com',
     profilePic: 'https://via.placeholder.com/150/9CA3AF/FFFFFF?text=SU',
     stats: {
-      totalCourses: 8,
-      averageGrade: 88,
+      upcomingSessions: 0,
+      completedSessions: 0,
+      favoriteTeachers: 0,
+      totalSpent: 0
     },
-    courses: [
-      { id: 'c1', name: 'Advanced React Development', progress: 75, grade: 'A-', instructor: 'Dr. Smith', due: '2025-07-15' },
-      { id: 'c2', name: 'Calculus III', progress: 90, grade: 'B+', instructor: 'Prof. Johnson', due: '2025-08-01' },
-      { id: 'c3', name: 'Modern History', progress: 60, grade: 'N/A', instructor: 'Ms. Davis', due: '2025-07-20' },
-      { id: 'c4', name: 'Data Structures', progress: 40, grade: 'C+', instructor: 'Mr. White', due: '2025-09-01' },
-    ],
-    notifications: [
-      { id: 'n1', type: 'grade', message: 'Grade updated for Calculus III: Quiz 2 (92%).', time: '1d ago', read: false },
-      { id: 'n2', type: 'announcement', message: 'Campus will be closed for holiday on July 4th.', time: '3d ago', read: true },
-    ]
+    upcomingSessions: [],
+    recentTeachers: [],
+    notifications: []
   };
 };
 
 // --- Sub-Components ---
 
-const SidebarButton = ({ icon: Icon, text, onClick, isActive, count }) => {
+const SidebarButton = ({ icon: Icon, text, onClick, isActive, count, isCollapsed = false }) => {
   return (
-    <button
-      onClick={onClick}
-      className={`group flex items-center w-full p-3 rounded-xl text-left font-medium transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg ${
-        isActive
-          ? 'bg-blue-600 text-white shadow-lg'
-          : 'text-slate-700 hover:bg-white/60 hover:text-blue-600 hover:backdrop-blur-sm'
-      }`}
-    >
-      <Icon className={`w-5 h-5 mr-3 ${isActive ? 'text-white' : 'text-slate-600 group-hover:text-blue-600'}`} />
-      <span>{text}</span>
-      {count && (
-        <span
-          className={`ml-auto px-2 py-0.5 text-xs font-bold rounded-full transition-all duration-300 ${
-            isActive ? 'bg-white text-blue-600' : 'bg-blue-500 text-white group-hover:bg-blue-600 group-hover:text-white'
-          }`}
-        >
-          {count}
+    <div className="relative">
+      <button
+        onClick={onClick}
+        className={`group flex items-center w-full rounded-xl text-left font-medium transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg overflow-hidden ${
+          isCollapsed ? 'p-3 justify-center' : 'p-3'
+        } ${
+          isActive
+            ? 'bg-blue-600 text-white shadow-lg'
+            : 'text-slate-700 hover:bg-white/60 hover:text-blue-600 hover:backdrop-blur-sm'
+        }`}
+        title={isCollapsed ? text : ''}
+      >
+        <Icon className={`w-5 h-5 ${isCollapsed ? '' : 'mr-3'} ${isActive ? 'text-white' : 'text-slate-600 group-hover:text-blue-600'} transition-colors duration-300 flex-shrink-0`} />
+        {!isCollapsed && (
+          <>
+            <span className="transition-all duration-300 truncate">{text}</span>
+            {count > 0 && (
+              <span
+                className={`ml-auto px-2 py-0.5 text-xs font-bold rounded-full transition-all duration-300 flex-shrink-0 ${
+                  isActive ? 'bg-white text-blue-600' : 'bg-blue-500 text-white group-hover:bg-blue-600 group-hover:text-white'
+                }`}
+              >
+                {count}
+              </span>
+            )}
+          </>
+        )}
+      </button>
+      {isCollapsed && count > 0 && (
+        <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center border border-white shadow-sm">
+          {count > 9 ? '9+' : count}
         </span>
       )}
-    </button>
+    </div>
   );
 };
 
@@ -155,14 +166,6 @@ const MainHeader = ({ currentUser, unseenNotificationsCount }) => {
               <User className="w-4 h-4 mr-2 text-purple-500" /> {/* Theme accent */}
               View Profile
             </Link>
-            <button onClick={() => alert('Settings Clicked!')} className="flex items-center w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors duration-150">
-              <Settings className="w-4 h-4 mr-2 text-purple-500" /> {/* Theme accent */}
-              Settings
-            </button>
-            <button onClick={() => alert('Help Clicked!')} className="flex items-center w-full text-left px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors duration-150">
-              <HelpCircle className="w-4 h-4 mr-2 text-purple-500" /> {/* Theme accent */}
-              Help
-            </button>
             <div className="border-t border-slate-100 mt-2 pt-2">
               <button onClick={handleLogout} className="flex items-center w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 transition-colors duration-150">
                 <LogOut className="w-4 h-4 mr-2" />
@@ -205,51 +208,123 @@ const StatCard = ({ title, value, icon: Icon, color, description }) => {
   );
 };
 
-const CourseCard = ({ course }) => {
-  // Determine gradient based on a simple hash or course ID for variety
-  const getCourseGradient = (id) => {
-    const gradients = [
-      'from-violet-500 to-purple-500',
-      'from-indigo-500 to-blue-500',
-      'from-pink-500 to-red-500', // Still allows for some reds/pinks if desired
-      'from-cyan-500 to-teal-500'
-    ];
-    const index = id.charCodeAt(0) % gradients.length;
-    return gradients[index];
+const SessionCard = ({ session }) => {
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'short', 
+      month: 'short', 
+      day: 'numeric' 
+    });
   };
 
-  const gradient = getCourseGradient(course.id);
-  const progressColor = course.progress >= 70 ? 'bg-emerald-500' : course.progress >= 40 ? 'bg-amber-500' : 'bg-red-500';
-
   return (
-    <div className="relative p-6 bg-white/60 backdrop-blur-sm rounded-2xl shadow-sm border border-white/40 overflow-hidden transform hover:scale-[1.02] transition-all duration-300 hover:shadow-lg group">
-      <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-10 group-hover:opacity-20 transition-opacity duration-300`}></div>
-      <div className="relative z-10">
-        <div className="flex justify-between items-start mb-4">
+    <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-white/40 hover:bg-white/80 transition-all duration-200 hover:shadow-lg transform hover:scale-[1.02]">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center space-x-3">
+          <img 
+            src={session.teacherProfile} 
+            alt={session.teacherName}
+            className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
+          />
           <div>
-            <h3 className="text-xl font-bold text-slate-800 mb-1">{course.name}</h3>
-            <p className="text-sm text-slate-500">Instructor: {course.instructor}</p>
-          </div>
-          <div className="p-2 rounded-full text-white bg-gradient-to-br from-purple-500 to-indigo-500 shadow-md"> {/* Consistent icon background */}
-            <BookOpen className="w-5 h-5" />
+            <h4 className="font-semibold text-slate-800 text-sm">{session.teacherName}</h4>
+            <p className="text-purple-600 text-xs font-medium">{session.subject}</p>
           </div>
         </div>
-        <div className="mb-4">
-          <div className="flex justify-between text-sm text-slate-600 mb-1">
-            <span>Progress: {course.progress}%</span>
-            <span>Grade: {course.grade}</span>
-          </div>
-          <div className="w-full bg-slate-200 rounded-full h-2.5">
-            <div className={`${progressColor} h-2.5 rounded-full`} style={{ width: `${course.progress}%` }}></div>
+        <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+          session.type === 'online' 
+            ? 'bg-green-100 text-green-700' 
+            : 'bg-blue-100 text-blue-700'
+        }`}>
+          {session.type === 'online' ? <Video className="w-3 h-3 inline mr-1" /> : <MapPin className="w-3 h-3 inline mr-1" />}
+          {session.type}
+        </div>
+      </div>
+      
+      <div className="space-y-2">
+        <div className="flex items-center text-slate-600 text-sm">
+          <Calendar className="w-4 h-4 mr-2 text-purple-500" />
+          {formatDate(session.date)}
+        </div>
+        <div className="flex items-center text-slate-600 text-sm">
+          <Clock className="w-4 h-4 mr-2 text-purple-500" />
+          {session.time} ({session.duration})
+        </div>
+      </div>
+      
+      <div className="flex space-x-2 mt-4">
+        <button className="flex-1 bg-gradient-to-r from-purple-600 to-violet-600 text-white py-2 px-3 rounded-lg text-xs font-medium hover:from-purple-700 hover:to-violet-700 transition-all duration-200">
+          Join Session
+        </button>
+        <button className="px-3 py-2 border border-purple-200 text-purple-600 rounded-lg text-xs font-medium hover:bg-purple-50 transition-all duration-200">
+          Reschedule
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const TeacherCard = ({ teacher }) => {
+  return (
+    <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-white/40 hover:bg-white/80 transition-all duration-200 hover:shadow-lg transform hover:scale-[1.02]">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center space-x-3">
+          <img 
+            src={teacher.image} 
+            alt={teacher.name}
+            className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
+          />
+          <div>
+            <h4 className="font-semibold text-slate-800 text-sm">{teacher.name}</h4>
+            <p className="text-slate-600 text-xs">{teacher.experience}</p>
           </div>
         </div>
-        <div className="flex justify-between items-center text-sm text-slate-500">
-          <span>Next Due: {course.due}</span>
-          <Link to={`/student/course/${course.id}`} className="text-purple-600 hover:text-purple-800 font-medium transition-colors duration-200 flex items-center group"> {/* Theme accent */}
-            View Course
-            <ChevronUp className="w-4 h-4 ml-1 transform rotate-90 group-hover:rotate-180 transition-transform duration-200" />
-          </Link>
+        <button className={`p-2 rounded-full transition-all duration-200 ${
+          teacher.isFavorite 
+            ? 'text-red-500 bg-red-50 hover:bg-red-100' 
+            : 'text-slate-400 hover:text-red-500 hover:bg-red-50'
+        }`}>
+          <Heart className={`w-4 h-4 ${teacher.isFavorite ? 'fill-current' : ''}`} />
+        </button>
+      </div>
+      
+      <div className="space-y-2 mb-3">
+        <div className="flex flex-wrap gap-1">
+          {teacher.subjects.slice(0, 2).map((subject, index) => (
+            <span key={index} className="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">
+              {subject}
+            </span>
+          ))}
         </div>
+        
+        <div className="flex items-center justify-between text-xs text-slate-600">
+          <div className="flex items-center">
+            <Star className="w-3 h-3 text-yellow-500 fill-current mr-1" />
+            <span>{teacher.rating}</span>
+          </div>
+          <div className="flex items-center">
+            <Users className="w-3 h-3 mr-1" />
+            <span>{teacher.students} students</span>
+          </div>
+        </div>
+        
+        <div className="flex items-center text-sm font-semibold text-slate-800">
+          <DollarSign className="w-4 h-4 text-green-600 mr-1" />
+          ₹{teacher.hourlyRate}/hour
+        </div>
+      </div>
+      
+      <div className="flex space-x-2">
+        <Link 
+          to={`/student/book-class?teacher=${teacher.id}`}
+          className="flex-1 bg-gradient-to-r from-purple-600 to-violet-600 text-white py-2 px-3 rounded-lg text-xs font-medium hover:from-purple-700 hover:to-violet-700 transition-all duration-200 text-center"
+        >
+          Book Class
+        </Link>
+        <button className="px-3 py-2 border border-purple-200 text-purple-600 rounded-lg text-xs font-medium hover:bg-purple-50 transition-all duration-200">
+          View Profile
+        </button>
       </div>
     </div>
   );
@@ -257,8 +332,9 @@ const CourseCard = ({ course }) => {
 
 const NotificationItem = ({ notification }) => {
   const notificationIcon = {
-    grade: <Award className="w-5 h-5 text-emerald-500" />,
-    announcement: <Lightbulb className="w-5 h-5 text-amber-500" />,
+    session: <Calendar className="w-5 h-5 text-purple-500" />,
+    booking: <BookCheck className="w-5 h-5 text-emerald-500" />,
+    reminder: <Bell className="w-5 h-5 text-amber-500" />,
     message: <MessageSquare className="w-5 h-5 text-blue-500" />,
     alert: <AlertTriangle className="w-5 h-5 text-red-500" />,
   };
@@ -286,6 +362,7 @@ const StudentDashboard = () => {
   const [activeMenuItem, setActiveMenuItem] = useState('dashboard'); // State for active sidebar item
   const [dashboardData, setDashboardData] = useState(null); // All data for the dashboard
   const [mockTeachers, setMockTeachers] = useState([]); // For storing teacher data
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // State for sidebar collapse
   const [loading, setLoading] = useState(false); // For loading state
 
   // Effect to load current user and dashboard data
@@ -439,7 +516,7 @@ const StudentDashboard = () => {
   const cardClass = "relative p-6 bg-white/60 backdrop-blur-sm rounded-2xl shadow-sm border border-white/40";
   const sectionTitleClass = "text-2xl font-bold text-slate-800 mb-6 flex items-center gap-3";
 
-  const sidebarClass = `w-72 bg-white/80 backdrop-blur-xl border-r border-white/20 p-6 flex flex-col relative overflow-hidden shadow-lg z-10`; 
+  const sidebarClass = `${isSidebarCollapsed ? 'w-24' : 'w-72'} bg-white/80 backdrop-blur-xl border-r border-white/20 ${isSidebarCollapsed ? 'p-4' : 'p-6'} flex flex-col relative overflow-hidden shadow-lg z-10 transition-all duration-300`; 
   const mainContentClass = `flex-1 p-8 overflow-y-auto`;
 
   return (
@@ -457,79 +534,79 @@ const StudentDashboard = () => {
         {/* Sidebar */}
         <aside className={sidebarClass}>
           <div className="relative z-10 flex flex-col h-full">
-            <Link to="/" className="mb-8 text-center block group">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mb-4 mx-auto transform group-hover:scale-105 transition-all duration-300 cursor-pointer">
-                <GraduationCap className="w-8 h-8 text-white" />
-              </div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors duration-200">Yuvshiksha</h2>
-              <p className="text-slate-600 text-sm group-hover:text-slate-700 transition-colors duration-200">Student Portal</p>
-            </Link>
+            {/* Collapse Toggle Button */}
+            <div className={`flex items-center mb-8 ${isSidebarCollapsed ? 'flex-col space-y-4' : 'justify-between'}`}>
+              {!isSidebarCollapsed && (
+                <Link to="/" className="flex items-center group">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center mr-3 transform group-hover:scale-105 transition-all duration-300">
+                    <GraduationCap className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors duration-200">Yuvshiksha</h2>
+                    <p className="text-slate-600 text-xs group-hover:text-slate-700 transition-colors duration-200">Student Portal</p>
+                  </div>
+                </Link>
+              )}
+              
+              {isSidebarCollapsed && (
+                <Link to="/" className="group mb-2">
+                  <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center transform group-hover:scale-105 transition-all duration-300 shadow-lg">
+                    <GraduationCap className="w-7 h-7 text-white" />
+                  </div>
+                </Link>
+              )}
+              
+              <button
+                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                className={`p-2 rounded-lg hover:bg-white/60 transition-colors duration-200 text-slate-600 hover:text-blue-600 shadow-sm ${isSidebarCollapsed ? 'w-full' : ''}`}
+                title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              >
+                {isSidebarCollapsed ? <ChevronRight className="w-5 h-5 mx-auto" /> : <ChevronLeft className="w-5 h-5" />}
+              </button>
+            </div>
 
-            <nav className="space-y-2 mb-8 flex-1">
+            <nav className={`flex-1 mb-8 overflow-hidden ${isSidebarCollapsed ? 'space-y-3' : 'space-y-2'}`}>
               <SidebarButton
                 icon={Home}
                 text="Dashboard"
                 onClick={() => setActiveMenuItem('dashboard')}
                 isActive={activeMenuItem === 'dashboard'}
+                isCollapsed={isSidebarCollapsed}
               />
               <SidebarButton
-                icon={BookCheck}
-                text="My Courses"
-                onClick={() => setActiveMenuItem('courses')}
-                isActive={activeMenuItem === 'courses'}
-                count={dashboardData.courses.length}
+                icon={Calendar}
+                text="My Sessions"
+                onClick={() => setActiveMenuItem('sessions')}
+                isActive={activeMenuItem === 'sessions'}
+                count={dashboardData?.upcomingSessions?.length || 0}
+                isCollapsed={isSidebarCollapsed}
               />
               <SidebarButton
-                icon={ClipboardList}
-                text="Assignments"
-                onClick={() => setActiveMenuItem('assignments')}
-                isActive={activeMenuItem === 'assignments'}
-                count={dashboardData.assignments.filter(a => a.status === 'Due').length}
-              />
-              <SidebarButton
-                icon={Bell}
-                text="Notifications"
-                onClick={() => setActiveMenuItem('notifications')}
-                isActive={activeMenuItem === 'notifications'}
-                count={unseenNotificationsCount}
-              />
-              <SidebarButton
-                icon={MessageSquare}
-                text="Messages"
-                onClick={() => setActiveMenuItem('messages')}
-                isActive={activeMenuItem === 'messages'}
-                count={3}
-              />
-              <SidebarButton
-                icon={AwardIcon}
-                text="Achievements"
-                onClick={() => setActiveMenuItem('achievements')}
-                isActive={activeMenuItem === 'achievements'}
-                count={5}
+                icon={Bookmark}
+                text="Favorites"
+                onClick={() => setActiveMenuItem('favorites')}
+                isActive={activeMenuItem === 'favorites'}
+                count={dashboardData?.recentTeachers?.filter(t => t.isFavorite).length || 0}
+                isCollapsed={isSidebarCollapsed}
               />
               
               {/* Navigation Links */}
               <div className="border-t border-white/20 pt-4 mt-4">
                 <Link
                   to="/student/find-teachers"
-                  className="flex items-center space-x-3 w-full p-3 text-left text-slate-700 hover:bg-white/40 rounded-xl transition-all duration-200 group"
+                  className={`flex items-center w-full p-3 text-left text-slate-700 hover:bg-white/40 rounded-xl transition-all duration-200 group overflow-hidden ${isSidebarCollapsed ? 'justify-center' : 'space-x-3'}`}
+                  title={isSidebarCollapsed ? 'Find Teachers' : ''}
                 >
-                  <Search className="w-5 h-5 group-hover:text-blue-600 transition-colors duration-200" />
-                  <span className="group-hover:text-blue-600 transition-colors duration-200">Find Teachers</span>
+                  <Search className="w-5 h-5 group-hover:text-blue-600 transition-colors duration-200 flex-shrink-0" />
+                  {!isSidebarCollapsed && <span className="group-hover:text-blue-600 transition-colors duration-200 truncate">Find Teachers</span>}
                 </Link>
                 <Link
                   to="/student/messages"
-                  className="flex items-center space-x-3 w-full p-3 text-left text-slate-700 hover:bg-white/40 rounded-xl transition-all duration-200 group"
+                  className={`flex items-center w-full p-3 text-left text-slate-700 hover:bg-white/40 rounded-xl transition-all duration-200 group overflow-hidden ${isSidebarCollapsed ? 'justify-center' : 'space-x-3'}`}
+                  title={isSidebarCollapsed ? 'Messages' : ''}
                 >
-                  <MessageSquare className="w-5 h-5 group-hover:text-blue-600 transition-colors duration-200" />
-                  <span className="group-hover:text-blue-600 transition-colors duration-200">Messages</span>
-                </Link>
-                <Link
-                  to="/help"
-                  className="flex items-center space-x-3 w-full p-3 text-left text-slate-700 hover:bg-white/40 rounded-xl transition-all duration-200 group"
-                >
-                  <HelpCircle className="w-5 h-5 group-hover:text-blue-600 transition-colors duration-200" />
-                  <span className="group-hover:text-blue-600 transition-colors duration-200">Help</span>
+                  <MessageSquare className="w-5 h-5 group-hover:text-blue-600 transition-colors duration-200 flex-shrink-0" />
+                  {!isSidebarCollapsed && <span className="group-hover:text-blue-600 transition-colors duration-200 truncate">Messages</span>}
                 </Link>
               </div>
             </nav>
@@ -541,10 +618,11 @@ const StudentDashboard = () => {
                   setToLocalStorage('currentUser', null); // Clear current user
                   navigate('/login');
                 }}
-                className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white py-3 rounded-xl font-semibold hover:from-red-700 hover:to-red-800 transition-all duration-300 shadow-lg flex items-center justify-center space-x-2 transform hover:scale-[1.02] hover:-translate-y-1"
+                className={`w-full bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl font-semibold hover:from-red-700 hover:to-red-800 transition-all duration-300 shadow-lg flex items-center justify-center transform hover:scale-[1.02] hover:-translate-y-1 ${isSidebarCollapsed ? 'py-3 px-3' : 'py-3 space-x-2'}`}
+                title={isSidebarCollapsed ? 'Logout' : ''}
               >
-                <LogOut className="w-5 h-5" />
-                <span>Logout</span>
+                <LogOut className={`w-5 h-5 ${isSidebarCollapsed ? '' : ''}`} />
+                {!isSidebarCollapsed && <span>Logout</span>}
               </button>
             </div>
           </div>
@@ -557,43 +635,89 @@ const StudentDashboard = () => {
           {activeMenuItem === 'dashboard' && (
             <section className="space-y-10">
               {/* Stat Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard
-                  title="Total Courses"
-                  value={dashboardData.stats.totalCourses}
-                  icon={BookOpen}
+                  title="Upcoming Sessions"
+                  value={dashboardData.stats.upcomingSessions}
+                  icon={Calendar}
                   color="primary"
-                  description="Currently enrolled"
+                  description="Next 7 days"
                 />
                 <StatCard
-                  title="Average Grade"
-                  value={`${dashboardData.stats.averageGrade}%`}
-                  icon={Award}
+                  title="Completed Sessions"
+                  value={dashboardData.stats.completedSessions}
+                  icon={BookCheck}
                   color="secondary"
-                  description="Overall performance"
+                  description="All time"
+                />
+                <StatCard
+                  title="Favorite Teachers"
+                  value={dashboardData.stats.favoriteTeachers}
+                  icon={Heart}
+                  color="accent"
+                  description="Bookmarked"
+                />
+                <StatCard
+                  title="Total Spent"
+                  value={`₹${dashboardData.stats.totalSpent.toLocaleString()}`}
+                  icon={DollarSign}
+                  color="success"
+                  description="Learning investment"
                 />
               </div>
 
-              {/* My Courses */}
+              {/* Upcoming Sessions */}
               <div className={cardClass}>
                 <h2 className={sectionTitleClass}>
-                  <BookCheck className="w-7 h-7 text-purple-600" /> {/* Theme accent */}
-                  My Courses
+                  <Calendar className="w-7 h-7 text-purple-600" />
+                  Upcoming Sessions
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {dashboardData.courses.map(course => (
-                    <CourseCard key={course.id} course={course} />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {dashboardData.upcomingSessions.map(session => (
+                    <SessionCard key={session.id} session={session} />
                   ))}
                 </div>
-                {dashboardData.courses.length === 0 && (
-                  <p className="text-slate-500 text-center py-8 text-lg">You are not enrolled in any courses yet.</p>
+                {dashboardData.upcomingSessions.length === 0 && (
+                  <div className="text-center py-12">
+                    <Calendar className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                    <p className="text-slate-500 text-lg mb-4">No upcoming sessions</p>
+                    <Link 
+                      to="/student/find-teachers"
+                      className="inline-flex items-center bg-gradient-to-r from-purple-600 to-violet-600 text-white px-6 py-3 rounded-xl font-medium hover:from-purple-700 hover:to-violet-700 transition-all duration-200"
+                    >
+                      <Search className="w-5 h-5 mr-2" />
+                      Find Teachers
+                    </Link>
+                  </div>
                 )}
+              </div>
+
+              {/* Recommended Teachers */}
+              <div className={cardClass}>
+                <h2 className={sectionTitleClass}>
+                  <Users className="w-7 h-7 text-purple-600" />
+                  Recommended Teachers
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {dashboardData.recentTeachers.map(teacher => (
+                    <TeacherCard key={teacher.id} teacher={teacher} />
+                  ))}
+                </div>
+                <div className="text-center mt-8">
+                  <Link 
+                    to="/student/find-teachers"
+                    className="inline-flex items-center text-purple-600 hover:text-purple-800 font-medium transition-colors duration-200"
+                  >
+                    View All Teachers
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </Link>
+                </div>
               </div>
 
               {/* Recent Notifications */}
               <div className={cardClass}>
                 <h2 className={sectionTitleClass}>
-                  <Bell className="w-7 h-7 text-purple-600" /> {/* Theme accent */}
+                  <Bell className="w-7 h-7 text-purple-600" />
                   Recent Notifications
                 </h2>
                 <div className="space-y-4">
@@ -615,77 +739,57 @@ const StudentDashboard = () => {
             </section>
           )}
 
-          {/* Individual Section Views (Simplified for brevity) */}
-          {activeMenuItem === 'courses' && (
+          {/* Individual Section Views */}
+          {activeMenuItem === 'sessions' && (
             <section>
               <h2 className={sectionTitleClass}>
-                <BookCheck className="w-7 h-7 text-purple-600" /> My Courses
+                <Calendar className="w-7 h-7 text-purple-600" /> My Sessions
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {dashboardData.courses.map(course => (
-                  <CourseCard key={course.id} course={course} />
+                {dashboardData.upcomingSessions.map(session => (
+                  <SessionCard key={session.id} session={session} />
                 ))}
               </div>
-              {dashboardData.courses.length === 0 && (
-                <p className="text-slate-500 text-center py-8 text-lg">You are not enrolled in any courses yet.</p>
+              {dashboardData.upcomingSessions.length === 0 && (
+                <div className="text-center py-12">
+                  <Calendar className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+                  <p className="text-slate-500 text-lg mb-4">No sessions scheduled</p>
+                  <Link 
+                    to="/student/find-teachers"
+                    className="inline-flex items-center bg-gradient-to-r from-purple-600 to-violet-600 text-white px-6 py-3 rounded-xl font-medium hover:from-purple-700 hover:to-violet-700 transition-all duration-200"
+                  >
+                    <Search className="w-5 h-5 mr-2" />
+                    Book Your First Session
+                  </Link>
+                </div>
               )}
             </section>
           )}
 
-          {activeMenuItem === 'assignments' && (
+          {activeMenuItem === 'favorites' && (
             <section>
               <h2 className={sectionTitleClass}>
-                <ClipboardList className="w-7 h-7 text-purple-600" /> All Assignments
+                <Heart className="w-7 h-7 text-purple-600" /> Favorite Teachers
               </h2>
-              <div className="space-y-6">
-                {dashboardData.assignments.map(assignment => (
-                  <AssignmentCard key={assignment.id} assignment={assignment} />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {dashboardData.recentTeachers.filter(teacher => teacher.isFavorite).map(teacher => (
+                  <TeacherCard key={teacher.id} teacher={teacher} />
                 ))}
               </div>
-              {dashboardData.assignments.length === 0 && (
-                <p className="text-slate-500 text-center py-8 text-lg">No assignments found.</p>
+              {dashboardData.recentTeachers.filter(teacher => teacher.isFavorite).length === 0 && (
+                <div className="text-center py-12">
+                  <Heart className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+                  <p className="text-slate-500 text-lg mb-4">No favorite teachers yet</p>
+                  <p className="text-slate-400 mb-6">Start exploring and save your favorite teachers for quick access</p>
+                  <Link 
+                    to="/student/find-teachers"
+                    className="inline-flex items-center bg-gradient-to-r from-purple-600 to-violet-600 text-white px-6 py-3 rounded-xl font-medium hover:from-purple-700 hover:to-violet-700 transition-all duration-200"
+                  >
+                    <Search className="w-5 h-5 mr-2" />
+                    Discover Teachers
+                  </Link>
+                </div>
               )}
-            </section>
-          )}
-
-          {activeMenuItem === 'notifications' && (
-            <section>
-              <h2 className={sectionTitleClass}>
-                <Bell className="w-7 h-7 text-purple-600" /> All Notifications
-              </h2>
-              <div className="space-y-6">
-                {dashboardData.notifications.length > 0 ? (
-                  dashboardData.notifications.map(notification => (
-                    <NotificationItem key={notification.id} notification={notification} />
-                  ))
-                ) : (
-                  <p className="text-slate-500 text-center py-8 text-lg">No notifications to display.</p>
-                )}
-              </div>
-            </section>
-          )}
-
-          {activeMenuItem === 'messages' && (
-            <section>
-              <h2 className={sectionTitleClass}>
-                <MessageSquare className="w-7 h-7 text-purple-600" /> My Messages
-              </h2>
-              <div className="text-slate-500 text-center py-8 text-lg">
-                <p>No messages to display. This section would show your conversations.</p>
-                <p className="mt-2 text-sm">Integration with a chat feature would go here.</p>
-              </div>
-            </section>
-          )}
-
-          {activeMenuItem === 'achievements' && (
-            <section>
-              <h2 className={sectionTitleClass}>
-                <Trophy className="w-7 h-7 text-purple-600" /> My Achievements
-              </h2>
-              <div className="text-slate-500 text-center py-8 text-lg">
-                <p>No achievements to display yet. Keep up the great work!</p>
-                <p className="mt-2 text-sm">This section would showcase your badges, awards, and milestones.</p>
-              </div>
             </section>
           )}
 
