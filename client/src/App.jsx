@@ -6,9 +6,11 @@ import { useEffect, useState } from "react";
 import Navbar from "./components/Navbar.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import { SocketProvider } from "./contexts/SocketContext.jsx";
+import { NotificationProvider } from "./contexts/NotificationContext.jsx";
 
 // Utility Pages
 import Landing from "./pages/utils/Landing.jsx";
+import NotificationsPage from "./pages/utils/NotificationsPage.jsx";
 
 // Auth Pages
 import Login from "./pages/auth/Login.jsx";
@@ -77,7 +79,8 @@ function App() {
     '/student/messages',
     '/teacher/schedule',
     '/teacher/bookings',
-    '/teacher/messages'
+    '/teacher/messages',
+    '/notifications'
   ];
 
   // Check if current route should show navbar
@@ -85,8 +88,9 @@ function App() {
 
   return (
     <SocketProvider userId={currentUser?._id}>
-      {shouldShowNavbar && <Navbar />}
-      <Routes>
+      <NotificationProvider>
+        {shouldShowNavbar && <Navbar />}
+        <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
@@ -94,6 +98,16 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
+
+        {/* Protected Utility Routes */}
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute allowedRoles={[USER_ROLES.STUDENT, USER_ROLES.TEACHER]} profileCompleteRequired={true}>
+              <NotificationsPage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Student Routes */}
         {/* Student Profile Setup: Requires student role, profile MUST NOT be complete yet */}
@@ -215,6 +229,7 @@ function App() {
         {/* Catch-all for undefined routes */}
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </NotificationProvider>
     </SocketProvider>
   );
 }

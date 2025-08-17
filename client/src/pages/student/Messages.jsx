@@ -129,7 +129,10 @@ const Messages = () => {
   // Socket event listeners
   useEffect(() => {
     if (socket && isConnected) {
+      console.log('Setting up socket listeners, socket connected:', isConnected);
+      
       socket.on('new_message', (message) => {
+        console.log('Received new_message:', message);
         // Add new message to current conversation if it matches
         if (selectedConversation && 
             (message.sender._id === selectedConversation.participant._id || 
@@ -141,6 +144,16 @@ const Messages = () => {
         fetchConversations();
       });
 
+      socket.on('message_sent', (sentMessage) => {
+        console.log('Message sent confirmation:', sentMessage);
+        // Update local message status to sent
+        setMessages(prev => prev.map(msg => 
+          msg.content === sentMessage.content && msg.status === 'sending'
+            ? { ...msg, _id: sentMessage._id, status: 'sent', createdAt: sentMessage.createdAt }
+            : msg
+        ));
+      });
+
       socket.on('message_notification', (notification) => {
         // Show notification or update unread count
         fetchConversations();
@@ -148,8 +161,11 @@ const Messages = () => {
 
       return () => {
         socket.off('new_message');
+        socket.off('message_sent');
         socket.off('message_notification');
       };
+    } else {
+      console.log('Socket not connected:', { socket: !!socket, isConnected });
     }
   }, [socket, isConnected, selectedConversation]);
 
@@ -197,6 +213,13 @@ const Messages = () => {
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation || sendingMessage) return;
 
+    console.log('Sending message...', { 
+      isOnline, 
+      hasSocket: !!socket, 
+      isConnected, 
+      message: newMessage.trim() 
+    });
+
     const messageData = {
       sender: currentUser._id,
       recipient: selectedConversation.participant._id,
@@ -205,39 +228,70 @@ const Messages = () => {
     };
 
     setSendingMessage(true);
+    
+    // First, add message to local state immediately for better UX
+    const localMessage = {
+      _id: 'temp_' + Date.now(),
+      sender: { _id: currentUser._id },
+      content: messageData.content,
+      createdAt: new Date(),
+      isRead: false,
+      status: 'sending' // Mark as sending initially
+    };
+    setMessages(prev => [...prev, localMessage]);
+    setNewMessage(''); // Clear input immediately
+    
     try {
-      if (isOnline && socket && isConnected) {
-        // Send immediately if online
+      // Try to send via socket first (if available and online)
+      if (socket && isConnected && isOnline) {
+        console.log('Sending via socket...');
         socket.emit('send_message', messageData);
-        setNewMessage('');
+        
+        // Update message status to sent
+        setMessages(prev => prev.map(msg => 
+          msg._id === localMessage._id 
+            ? { ...msg, status: 'sent' }
+            : msg
+        ));
       } else {
-        // Queue message if offline
+        // Fallback: Queue message for later or send via HTTP
+        console.log('Socket not available, queuing message or using HTTP fallback', {
+          hasSocket: !!socket,
+          isConnected,
+          isOnline
+        });
+        
+        // Update message status to queued
+        setMessages(prev => prev.map(msg => 
+          msg._id === localMessage._id 
+            ? { ...msg, status: 'queued' }
+            : msg
+        ));
+        
+        // Queue message
         const queuedMessage = {
           ...messageData,
           queuedAt: new Date().toISOString(),
-          tempId: 'queued_' + Date.now()
+          tempId: localMessage._id
         };
         
         setQueuedMessages(prev => [...prev, queuedMessage]);
         
-        // Add to local messages immediately for better UX
-        const localMessage = {
-          _id: queuedMessage.tempId,
-          sender: { _id: currentUser._id },
-          content: messageData.content,
-          createdAt: new Date(),
-          isRead: false,
-          status: 'queued' // Mark as queued
-        };
-        setMessages(prev => [...prev, localMessage]);
-        setNewMessage('');
-        
-        // Show queued notification
-        setShowOfflineNotice(true);
-        setTimeout(() => setShowOfflineNotice(false), 3000);
+        // Show queued notification only if actually offline
+        if (!isOnline) {
+          setShowOfflineNotice(true);
+          setTimeout(() => setShowOfflineNotice(false), 3000);
+        }
       }
     } catch (error) {
       console.error('Error sending message:', error);
+      
+      // Update message status to failed
+      setMessages(prev => prev.map(msg => 
+        msg._id === localMessage._id 
+          ? { ...msg, status: 'failed' }
+          : msg
+      ));
     } finally {
       setSendingMessage(false);
     }

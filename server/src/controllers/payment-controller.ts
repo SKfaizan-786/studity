@@ -1,8 +1,10 @@
 import { Request, Response } from 'express';
 import { AuthenticatedRequest, getUserFromRequest } from '../utils/authHelpers';
 import Payment from '../models/Payment';
-import Booking from '../models/Booking';
+import { Booking } from '../models/Booking';
 import Course from '../models/Course';
+import UserModel from '../models/User';
+import { notificationService } from '../services/notificationService';
 
 // Create payment intent (initiate payment)
 export const createPaymentIntent = async (req: AuthenticatedRequest, res: Response) => {
@@ -35,7 +37,7 @@ export const createPaymentIntent = async (req: AuthenticatedRequest, res: Respon
     const payment = new Payment({
       user: user._id,
       booking: bookingId,
-      amount: booking.price,
+      amount: booking.amount,
       paymentMethod: gateway as any,
       status: 'pending',
       teacher: booking.teacher,
@@ -88,6 +90,14 @@ export const confirmPayment = async (req: Request, res: Response) => {
         paymentStatus: 'paid',
         status: 'confirmed'
       });
+
+      // Send notification to teacher about payment received
+      const booking = await Booking.findById(payment.booking);
+      if (booking) {
+        const student = await UserModel.findById(payment.user);
+        const studentName = student ? `${student.firstName} ${student.lastName}` : 'Student';
+        await notificationService.notifyPaymentReceived(payment, studentName);
+      }
     }
 
     res.json({
@@ -268,6 +278,11 @@ export const processRefund = async (req: AuthenticatedRequest, res: Response) =>
     payment.processedBy = user._id as any;
 
     await payment.save();
+
+    // Send refund notification to user
+    if (action === 'approve') {
+      await notificationService.notifyRefundProcessed(payment, payment.refundReason || 'Refund approved by admin');
+    }
 
     res.json({
       message: `Refund ${action}d successfully`,

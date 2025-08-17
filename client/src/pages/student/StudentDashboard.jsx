@@ -36,6 +36,7 @@ const UserContext = createContext(null);
 // --- Helper Functions for Local Storage Consistency ---
 // Importing directly from the utility file
 import { getFromLocalStorage, setToLocalStorage } from '../utils/storage';
+import { useNotifications } from '../../contexts/NotificationContext';
 // --- End Helper Functions ---
 
 // --- Sample Data (replace with your actual data fetching logic) ---
@@ -98,8 +99,10 @@ const SidebarButton = ({ icon: Icon, text, onClick, isActive, count, isCollapsed
   );
 };
 
-const MainHeader = ({ currentUser, unseenNotificationsCount }) => {
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+const MainHeader = ({ currentUser }) => {
+  // Use notification context
+  const { unreadCount } = useNotifications();
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const navigate = useNavigate();
 
   const getTimeOfDay = () => {
@@ -133,25 +136,25 @@ const MainHeader = ({ currentUser, unseenNotificationsCount }) => {
         </div>
 
         <button
-          onClick={() => setDropdownOpen(!dropdownOpen)}
+          onClick={() => navigate('/notifications')}
           className="relative p-3 bg-white/70 backdrop-blur-sm rounded-xl hover:bg-white/80 transition-all duration-200 shadow-sm"
         >
           <Bell className="w-5 h-5 text-slate-700" />
-          {unseenNotificationsCount > 0 && (
+          {unreadCount > 0 && (
             <span className="absolute top-1 right-1 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white animate-bounce-once">
-              {unseenNotificationsCount}
+              {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
         </button>
 
         <div
           className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg cursor-pointer transform hover:scale-105 transition-all duration-200"
-          onClick={() => setDropdownOpen(!dropdownOpen)}
+          onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
         >
           {currentUser.firstName.charAt(0)}{currentUser.lastName.charAt(0)}
         </div>
 
-        {dropdownOpen && (
+        {profileDropdownOpen && (
           <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl py-2 z-50 animate-fade-in-down transform scale-95 origin-top-right transition-all duration-200">
             <div className="flex items-center space-x-3 px-4 py-3 border-b border-slate-100 mb-2">
               <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-500 rounded-lg flex items-center justify-center text-white font-bold text-md"> {/* Theme accent */}
@@ -364,6 +367,9 @@ const StudentDashboard = () => {
   const [mockTeachers, setMockTeachers] = useState([]); // For storing teacher data
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // State for sidebar collapse
   const [loading, setLoading] = useState(false); // For loading state
+  
+  // Use notification context
+  const { unreadCount } = useNotifications();
 
   // Effect to load current user and dashboard data
   useEffect(() => {
@@ -499,7 +505,8 @@ const StudentDashboard = () => {
     fetchData();
   }, [navigate]);
 
-  const unseenNotificationsCount = dashboardData?.notifications.filter(n => !n.read).length || 0;
+  // No longer needed as we use notification context
+  // const unseenNotificationsCount = dashboardData?.notifications.filter(n => !n.read).length || 0;
 
   if (!currentUser || !dashboardData) {
     return (
@@ -630,7 +637,7 @@ const StudentDashboard = () => {
 
         {/* Main Content */}
         <main className={mainContentClass}>
-          <MainHeader currentUser={currentUser} unseenNotificationsCount={unseenNotificationsCount} />
+          <MainHeader currentUser={currentUser} />
 
           {activeMenuItem === 'dashboard' && (
             <section className="space-y-10">

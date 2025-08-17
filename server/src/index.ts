@@ -13,6 +13,8 @@ import profileRoutes from './routes/profile';
 import bookingRoutes from './routes/bookings';
 import teacherRoutes from './routes/teachers';
 import messageRoutes from './routes/messages';
+import notificationRoutes from './routes/notifications';
+import { reminderService } from './services/reminderService';
 
 // Initialize passport configuration
 // Change this line to the new file name
@@ -59,7 +61,17 @@ app.use(passport.session()); // This will now correctly use the npm package
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI as string)
-  .then(() => console.log('✅ Connected to MongoDB'))
+  .then(() => {
+    console.log('✅ Connected to MongoDB');
+    
+    // Set socket.io instance for notifications
+    import('./services/notificationService').then(({ setSocketIO }) => {
+      setSocketIO(io);
+    });
+    
+    // Initialize reminder service after DB connection
+    reminderService.init();
+  })
   .catch((err) => console.error('❌ MongoDB connection error:', err));
 
 // MongoDB connection status logging
@@ -85,6 +97,7 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/teachers', teacherRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Root Route
 app.get('/', (_req, res) => {
@@ -168,12 +181,30 @@ io.on('connection', (socket) => {
       // Emit to both users
       io.to(roomId).emit('new_message', newMessage);
       
-      // Also emit to individual user rooms in case they're not in the chat room
+  // Also emit to individual user rooms in case they're not in the chat room
       io.to(`user_${data.recipient}`).emit('message_notification', {
         messageId: newMessage._id,
         sender: newMessage.sender,
         content: data.content,
         timestamp: newMessage.createdAt
+      });
+
+      // Create a message notification in the database
+      const { notificationService } = await import('./services/notificationService');
+      const populatedSender = newMessage.sender as any; // Type assertion for populated field
+      await notificationService.createNotification({
+        recipient: new (await import('mongoose')).Types.ObjectId(data.recipient),
+        sender: new (await import('mongoose')).Types.ObjectId(data.sender),
+        title: 'New Message',
+        message: `You have a new message from ${populatedSender.firstName} ${populatedSender.lastName}`,
+        type: 'message',
+        category: 'message',
+        priority: 'low',
+        actionUrl: `/messages/${data.sender}`,
+        data: {
+          messageId: newMessage._id,
+          senderId: data.sender
+        }
       });
 
     } catch (error) {

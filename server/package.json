@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@react-oauth/google": "^0.12.2",
+    "@types/node-cron": "^3.0.11",
     "@types/socket.io": "^3.0.1",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^3.0.2",
@@ -24,6 +25,7 @@
     "jwt-decode": "^4.0.0",
     "mongoose": "^8.0.3",
     "morgan": "^1.10.0",
+    "node-cron": "^4.2.1",
     "nodemailer": "^7.0.5",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
