@@ -37,10 +37,11 @@ const UserContext = createContext(null);
 // Importing directly from the utility file
 import { getFromLocalStorage, setToLocalStorage } from '../utils/storage';
 import { useNotifications } from '../../contexts/NotificationContext';
+import API_CONFIG from '../../config/api';
 // --- End Helper Functions ---
 
 // --- Sample Data (replace with your actual data fetching logic) ---
-const getSampleStudentData = (firstName = 'Student') => {
+const getSampleStudentData = (firstName = 'Student', recommendedTeachers = [], favoritesCount = 0) => {
   return {
     firstName: firstName,
     lastName: 'User',
@@ -49,11 +50,11 @@ const getSampleStudentData = (firstName = 'Student') => {
     stats: {
       upcomingSessions: 0,
       completedSessions: 0,
-      favoriteTeachers: 0,
+      favoriteTeachers: favoritesCount,
       totalSpent: 0
     },
     upcomingSessions: [],
-    recentTeachers: [],
+    recentTeachers: recommendedTeachers,
     notifications: []
   };
 };
@@ -268,7 +269,7 @@ const SessionCard = ({ session }) => {
   );
 };
 
-const TeacherCard = ({ teacher }) => {
+const TeacherCard = ({ teacher, onToggleFavorite }) => {
   return (
     <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-white/40 hover:bg-white/80 transition-all duration-200 hover:shadow-lg transform hover:scale-[1.02]">
       <div className="flex items-start justify-between mb-3">
@@ -283,11 +284,14 @@ const TeacherCard = ({ teacher }) => {
             <p className="text-slate-600 text-xs">{teacher.experience}</p>
           </div>
         </div>
-        <button className={`p-2 rounded-full transition-all duration-200 ${
-          teacher.isFavorite 
-            ? 'text-red-500 bg-red-50 hover:bg-red-100' 
-            : 'text-slate-400 hover:text-red-500 hover:bg-red-50'
-        }`}>
+        <button 
+          onClick={() => onToggleFavorite && onToggleFavorite(teacher.id)}
+          className={`p-2 rounded-full transition-all duration-200 ${
+            teacher.isFavorite 
+              ? 'text-red-500 bg-red-50 hover:bg-red-100' 
+              : 'text-slate-400 hover:text-red-500 hover:bg-red-50'
+          }`}
+        >
           <Heart className={`w-4 h-4 ${teacher.isFavorite ? 'fill-current' : ''}`} />
         </button>
       </div>
@@ -367,9 +371,95 @@ const StudentDashboard = () => {
   const [mockTeachers, setMockTeachers] = useState([]); // For storing teacher data
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // State for sidebar collapse
   const [loading, setLoading] = useState(false); // For loading state
+  const [favorites, setFavorites] = useState([]); // For storing favorite teacher IDs
   
   // Use notification context
   const { unreadCount } = useNotifications();
+
+  // Load favorites from localStorage on component mount
+  useEffect(() => {
+    const loadFavorites = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        console.log('🔍 Loading favorites, token:', token ? `present (${token.length} chars)` : 'missing');
+        
+        if (token) {
+          // Try to load from API first (same as teacher list)
+          try {
+            const API_BASE_URL = API_CONFIG.BASE_URL;
+            const url = `${API_BASE_URL}/api/profile/favourites`;
+            console.log('📡 Calling API:', url);
+            
+            // Clean the token (remove quotes if present)
+            const cleanToken = token.replace(/^"(.*)"$/, '$1');
+            console.log('🔑 Using token:', cleanToken.substring(0, 20) + '...');
+            
+            const response = await fetch(url, {
+              headers: {
+                'Authorization': `Bearer ${cleanToken}`,
+                'Content-Type': 'application/json'
+              }
+            });
+            
+            console.log('📊 API Response status:', response.status);
+            console.log('📋 Response headers:', Object.fromEntries(response.headers.entries()));
+            
+            if (response.ok) {
+              const data = await response.json();
+              console.log('✅ API favorites data:', data);
+              
+              const apiFavorites = data.favourites || [];
+              console.log('💾 Setting favorites:', apiFavorites);
+              setFavorites(apiFavorites);
+              
+              // Also save to localStorage for backup
+              localStorage.setItem('favoriteTeachers', JSON.stringify(apiFavorites));
+              return;
+            } else {
+              const errorText = await response.text();
+              console.log('❌ API response not ok:', response.status, errorText);
+            }
+          } catch (apiError) {
+            console.log('⚠️ API error:', apiError);
+          }
+        }
+        
+        // Fallback to localStorage
+        const savedFavorites = JSON.parse(localStorage.getItem('favoriteTeachers') || '[]');
+        console.log('📦 Using localStorage favorites:', savedFavorites);
+        setFavorites(savedFavorites);
+      } catch (error) {
+        console.error('❌ Error loading favorites:', error);
+        setFavorites([]);
+      }
+    };
+    
+    loadFavorites();
+  }, []);
+
+  // Update teacher favorite status when favorites change
+  useEffect(() => {
+    console.log('🔄 Favorites changed, updating dashboard data:', favorites);
+    console.log('📊 Current dashboard teachers:', dashboardData?.recentTeachers?.length || 0);
+    
+    if (dashboardData?.recentTeachers?.length > 0) {
+      const updatedTeachers = dashboardData.recentTeachers.map(teacher => ({
+        ...teacher,
+        isFavorite: favorites.includes(teacher.id)
+      }));
+      
+      console.log('🎯 Updated teachers with favorites:', updatedTeachers.map(t => ({ name: t.name, id: t.id, isFavorite: t.isFavorite })));
+      
+      setDashboardData(prevData => ({
+        ...prevData,
+        recentTeachers: updatedTeachers,
+        stats: {
+          ...prevData.stats,
+          favoriteTeachers: favorites.length
+        }
+      }));
+    }
+  }, [favorites]); // Re-run when favorites change
 
   // Effect to load current user and dashboard data
   useEffect(() => {
@@ -383,7 +473,7 @@ const StudentDashboard = () => {
     
     // For simplicity, directly set sample data. In a real app, you'd fetch this.
     setCurrentUser(user);
-    const sampleData = getSampleStudentData(user.firstName);
+    const sampleData = getSampleStudentData(user.firstName, [], favorites.length);
     setDashboardData(sampleData);
 
     // Simulate real-time updates for notifications (e.g., mark as read)
@@ -408,41 +498,360 @@ const StudentDashboard = () => {
   const fetchTeachers = async () => {
     try {
       setLoading(true);
+      console.log('🔍 Fetching teachers...');
       
       // Try API first
       const token = localStorage.getItem('token');
       if (token) {
         try {
-          const response = await fetch('/api/teachers/list', {
+          const API_BASE_URL = API_CONFIG.BASE_URL;
+          const cleanToken = token.replace(/^"(.*)"$/, '$1');
+          const url = `${API_BASE_URL}${API_CONFIG.ENDPOINTS.TEACHERS_LIST}`;
+          
+          console.log('📡 Fetching teachers from:', url);
+          
+          const response = await fetch(url, {
             headers: {
-              'Authorization': `Bearer ${token}`
+              'Authorization': `Bearer ${cleanToken}`
             }
           });
           
+          console.log('📊 Teachers API response status:', response.status);
+          
           if (response.ok) {
-            const teachers = await response.json();
+            const teachersData = await response.json();
+            console.log('✅ Teachers API data:', teachersData);
+            
+            // Check if it's the debug format or direct teachers array
+            const teachers = teachersData.teachers || teachersData;
+            console.log('👥 Teachers array:', teachers);
+            
             setMockTeachers(teachers);
+            const formattedTeachers = formatTeachersForDashboard(teachers);
+            // Update dashboard data with recommended teachers
+            setDashboardData(prevData => ({
+              ...prevData,
+              recentTeachers: formattedTeachers.slice(0, 6) // Show max 6 recommended teachers
+            }));
             return;
           }
         } catch (apiError) {
-          console.log('API not available, using localStorage...');
+          console.log('API not available, using localStorage...', apiError);
         }
       }
       
       // Fallback to localStorage - only show listed teachers
+      console.log('📦 Falling back to localStorage...');
       const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+      console.log('👥 All users in localStorage:', allUsers.length);
+      
       const listedTeachers = allUsers.filter(user => 
         user.role === 'teacher' && 
         user.teacherProfile && 
         user.teacherProfile.isListed === true // Only listed teachers
       );
       
+      console.log('✅ Listed teachers from localStorage:', listedTeachers.length, listedTeachers);
+      
       setMockTeachers(listedTeachers);
+      const formattedTeachers = formatTeachersForDashboard(listedTeachers);
+      
+      // Update dashboard data with recommended teachers
+      setDashboardData(prevData => ({
+        ...prevData,
+        recentTeachers: formattedTeachers.slice(0, 6) // Show max 6 recommended teachers
+      }));
       
     } catch (error) {
       console.error('Error fetching teachers:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Helper function to format teachers for dashboard display
+  const formatTeachersForDashboard = (teachers) => {
+    console.log('🔄 Formatting teachers for dashboard:', teachers.length, 'teachers');
+    console.log('📋 Current favorites:', favorites);
+    
+    return teachers.map(teacher => {
+      // Handle both possible data structures for subjects
+      const subjects = teacher.teacherProfile?.subjectsTaught || 
+                      teacher.teacherProfile?.subjects || 
+                      [];
+      const boards = teacher.teacherProfile?.boardsTaught || 
+                    teacher.teacherProfile?.boards || 
+                    [];
+
+      const teacherId = teacher._id || teacher.id || `teacher_${Date.now()}_${Math.random()}`;
+      const isFavorite = favorites.includes(teacherId);
+      
+      console.log(`👨‍🏫 Teacher: ${teacher.firstName} ${teacher.lastName}, ID: ${teacherId}, isFavorite: ${isFavorite}`);
+
+      return {
+        id: teacherId,
+        name: `${teacher.firstName || ''} ${teacher.lastName || ''}`.trim() || 'Teacher',
+        experience: `${teacher.teacherProfile?.experienceYears || 1} years experience`,
+        image: teacher.teacherProfile?.photoUrl || teacher.profilePicture || `https://via.placeholder.com/150/9CA3AF/FFFFFF?text=${(teacher.firstName || 'T').charAt(0)}`,
+        subjects: Array.isArray(subjects) ? subjects.map(s => s.text || s).slice(0, 3) : [subjects].filter(Boolean).slice(0, 3),
+        rating: teacher.rating || 4.5,
+        students: teacher.totalStudents || Math.floor(Math.random() * 100) + 10,
+        hourlyRate: teacher.teacherProfile?.hourlyRate || 500,
+        isFavorite: isFavorite, // Check if teacher is in current favorites
+        bio: teacher.teacherProfile?.bio || 'Experienced educator dedicated to student success.',
+        email: teacher.email,
+        phone: teacher.teacherProfile?.phone,
+        location: teacher.teacherProfile?.location || 'India',
+        teachingMode: teacher.teacherProfile?.teachingMode || 'hybrid',
+        availability: teacher.teacherProfile?.availability || []
+      };
+    });
+  };
+
+  // Function to add demo teachers for testing
+  const addDemoTeachers = () => {
+    const demoTeachers = [
+      {
+        _id: "teacher1",
+        firstName: "Anita",
+        lastName: "Sharma",
+        email: "anita.sharma@example.com",
+        role: "teacher",
+        profileComplete: true,
+        rating: 4.8,
+        totalStudents: 150,
+        teacherProfile: {
+          isListed: true,
+          experienceYears: 8,
+          hourlyRate: 800,
+          subjectsTaught: ["Mathematics", "Physics"],
+          boardsTaught: ["CBSE", "ICSE"],
+          bio: "Experienced mathematics teacher with a passion for making complex concepts simple.",
+          location: "Delhi, India",
+          teachingMode: "both",
+          photoUrl: "https://images.unsplash.com/photo-1494790108755-2616b332f-1/crop=faces&fit=crop&w=256&h=256",
+          phone: "+91-9876543210",
+          qualifications: "M.Sc Mathematics, B.Ed",
+          availability: [
+            { day: "Monday", slots: ["9:00 AM", "2:00 PM"] },
+            { day: "Wednesday", slots: ["10:00 AM", "3:00 PM"] },
+            { day: "Friday", slots: ["11:00 AM", "4:00 PM"] }
+          ]
+        }
+      },
+      {
+        _id: "teacher2",
+        firstName: "Rajesh",
+        lastName: "Kumar",
+        email: "rajesh.kumar@example.com",
+        role: "teacher",
+        profileComplete: true,
+        rating: 4.6,
+        totalStudents: 120,
+        teacherProfile: {
+          isListed: true,
+          experienceYears: 6,
+          hourlyRate: 650,
+          subjectsTaught: ["Chemistry", "Biology"],
+          boardsTaught: ["CBSE", "NCERT"],
+          bio: "Dedicated science teacher helping students excel in chemistry and biology.",
+          location: "Mumbai, India",
+          teachingMode: "online",
+          photoUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d/crop=faces&fit=crop&w=256&h=256",
+          phone: "+91-9876543211",
+          qualifications: "M.Sc Chemistry, B.Ed",
+          availability: [
+            { day: "Tuesday", slots: ["9:00 AM", "2:00 PM"] },
+            { day: "Thursday", slots: ["10:00 AM", "3:00 PM"] },
+            { day: "Saturday", slots: ["11:00 AM", "4:00 PM"] }
+          ]
+        }
+      },
+      {
+        _id: "teacher3",
+        firstName: "Priya",
+        lastName: "Patel",
+        email: "priya.patel@example.com",
+        role: "teacher",
+        profileComplete: true,
+        rating: 4.9,
+        totalStudents: 200,
+        teacherProfile: {
+          isListed: true,
+          experienceYears: 10,
+          hourlyRate: 900,
+          subjectsTaught: ["English", "Literature"],
+          boardsTaught: ["CBSE", "ICSE", "IB"],
+          bio: "English language expert with a decade of experience in literature and creative writing.",
+          location: "Bangalore, India",
+          teachingMode: "both",
+          photoUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80/crop=faces&fit=crop&w=256&h=256",
+          phone: "+91-9876543212",
+          qualifications: "M.A English Literature, B.Ed",
+          availability: [
+            { day: "Monday", slots: ["8:00 AM", "1:00 PM"] },
+            { day: "Wednesday", slots: ["9:00 AM", "2:00 PM"] },
+            { day: "Friday", slots: ["10:00 AM", "3:00 PM"] }
+          ]
+        }
+      }
+    ];
+
+    // Get existing users
+    const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    
+    // Add demo teachers if they don't exist
+    demoTeachers.forEach(teacher => {
+      const exists = existingUsers.find(user => user.email === teacher.email);
+      if (!exists) {
+        existingUsers.push(teacher);
+      }
+    });
+    
+    // Save back to localStorage
+    localStorage.setItem('users', JSON.stringify(existingUsers));
+    
+    // Refresh teachers
+    fetchTeachers();
+    
+    console.log('Demo teachers added successfully!');
+  };
+
+  // Debug function to test favorites API
+  const testFavoritesAPI = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const cleanToken = token?.replace(/^"(.*)"$/, '$1');
+      const API_BASE_URL = API_CONFIG.BASE_URL;
+      
+      console.log('🧪 Testing favorites API...');
+      console.log('📡 URL:', `${API_BASE_URL}/api/profile/favourites`);
+      console.log('🔑 Token:', cleanToken?.substring(0, 20) + '...');
+      
+      const response = await fetch(`${API_BASE_URL}/api/profile/favourites`, {
+        headers: {
+          'Authorization': `Bearer ${cleanToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('✅ Response status:', response.status);
+      const data = await response.json();
+      console.log('📊 Response data:', data);
+      
+      if (response.ok) {
+        alert(`Favorites loaded successfully! Found ${data.favourites?.length || 0} favorite teachers: ${JSON.stringify(data.favourites)}`);
+      } else {
+        alert(`API Error: ${response.status} - ${data.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('🚨 API Test Error:', error);
+      alert(`Network Error: ${error.message}`);
+    }
+  };
+
+  // Debug function to check current user
+  const testCurrentUser = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const cleanToken = token?.replace(/^"(.*)"$/, '$1');
+      const API_BASE_URL = API_CONFIG.BASE_URL;
+      
+      console.log('👤 Testing current user...');
+      
+      const response = await fetch(`${API_BASE_URL}/api/profile`, {
+        headers: {
+          'Authorization': `Bearer ${cleanToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('✅ User response status:', response.status);
+      const userData = await response.json();
+      console.log('👤 Current user data:', userData);
+      
+      if (response.ok) {
+        alert(`Logged in as: ${userData.firstName} ${userData.lastName}\nUser ID: ${userData._id}\nEmail: ${userData.email}\nRole: ${userData.role}`);
+      } else {
+        alert(`User API Error: ${response.status} - ${userData.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('🚨 User Test Error:', error);
+      alert(`Network Error: ${error.message}`);
+    }
+  };
+
+  // Function to toggle teacher favorite status
+  const toggleFavorite = async (teacherId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const isFav = favorites.includes(teacherId);
+      
+      if (token) {
+        // Use the same API endpoint as teacher list
+        try {
+          const API_BASE_URL = API_CONFIG.BASE_URL;
+          const response = await fetch(`${API_BASE_URL}/api/profile/favourites`, {
+            method: isFav ? 'DELETE' : 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ teacherId })
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            const updatedFavorites = data.favourites || [];
+            setFavorites(updatedFavorites);
+            
+            // Update the recentTeachers in dashboard data to reflect favorite changes
+            setDashboardData(prevData => ({
+              ...prevData,
+              recentTeachers: prevData.recentTeachers.map(teacher => ({
+                ...teacher,
+                isFavorite: updatedFavorites.includes(teacher.id)
+              })),
+              stats: {
+                ...prevData.stats,
+                favoriteTeachers: updatedFavorites.length
+              }
+            }));
+
+            // Also save to localStorage for backup
+            localStorage.setItem('favoriteTeachers', JSON.stringify(updatedFavorites));
+            return;
+          }
+        } catch (apiError) {
+          console.log('API not available, using localStorage fallback');
+        }
+      }
+      
+      // Fallback to localStorage only
+      const updatedFavorites = isFav
+        ? favorites.filter(id => id !== teacherId)
+        : [...favorites, teacherId];
+      
+      setFavorites(updatedFavorites);
+      
+      // Update the recentTeachers in dashboard data to reflect favorite changes
+      setDashboardData(prevData => ({
+        ...prevData,
+        recentTeachers: prevData.recentTeachers.map(teacher => ({
+          ...teacher,
+          isFavorite: updatedFavorites.includes(teacher.id)
+        })),
+        stats: {
+          ...prevData.stats,
+          favoriteTeachers: updatedFavorites.length
+        }
+      }));
+
+      // Save to localStorage
+      localStorage.setItem('favoriteTeachers', JSON.stringify(updatedFavorites));
+      
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
     }
   };
 
@@ -494,8 +903,11 @@ const StudentDashboard = () => {
           userForDashboard = currentUser;
         }
 
-        setDashboardData(getSampleStudentData(userForDashboard.firstName));
-        await fetchTeachers();
+        // Initialize with basic dashboard data first (without teachers)
+        const basicDashboardData = getSampleStudentData(userForDashboard.firstName, [], favorites.length);
+        setDashboardData(basicDashboardData);
+        
+        // Teachers will be fetched by the separate useEffect when favorites are loaded
       } catch (error) {
         console.error('Error loading dashboard:', error);
         navigate('/login');
@@ -504,6 +916,14 @@ const StudentDashboard = () => {
 
     fetchData();
   }, [navigate]);
+
+  // Separate effect to refetch teachers when favorites change
+  useEffect(() => {
+    if (currentUser && favorites.length >= 0) { // >= 0 to handle empty arrays
+      console.log('🔄 Favorites updated, refreshing teacher data...');
+      fetchTeachers();
+    }
+  }, [favorites, currentUser]);
 
   // No longer needed as we use notification context
   // const unseenNotificationsCount = dashboardData?.notifications.filter(n => !n.read).length || 0;
@@ -705,20 +1125,64 @@ const StudentDashboard = () => {
                   <Users className="w-7 h-7 text-purple-600" />
                   Recommended Teachers
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {dashboardData.recentTeachers.map(teacher => (
-                    <TeacherCard key={teacher.id} teacher={teacher} />
-                  ))}
-                </div>
-                <div className="text-center mt-8">
-                  <Link 
-                    to="/student/find-teachers"
-                    className="inline-flex items-center text-purple-600 hover:text-purple-800 font-medium transition-colors duration-200"
-                  >
-                    View All Teachers
-                    <ChevronRight className="w-4 h-4 ml-1" />
-                  </Link>
-                </div>
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-purple-600 mr-2" />
+                    <span className="text-slate-600">Loading teachers...</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      {dashboardData.recentTeachers.map(teacher => (
+                        <TeacherCard key={teacher.id} teacher={teacher} onToggleFavorite={toggleFavorite} />
+                      ))}
+                    </div>
+                    {dashboardData.recentTeachers.length === 0 && (
+                      <div className="text-center py-12">
+                        <Users className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                        <p className="text-slate-500 text-lg mb-4">No teachers available</p>
+                        <div className="space-y-3">
+                          <button
+                            onClick={addDemoTeachers}
+                            className="block mx-auto bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200"
+                          >
+                            Add Demo Teachers
+                          </button>
+                          <button
+                            onClick={testFavoritesAPI}
+                            className="block mx-auto bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:from-green-700 hover:to-emerald-700 transition-all duration-200 mb-2"
+                          >
+                            Test Favorites API
+                          </button>
+                          <button
+                            onClick={testCurrentUser}
+                            className="block mx-auto bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 mb-4"
+                          >
+                            Check Current User
+                          </button>
+                          <Link 
+                            to="/student/find-teachers"
+                            className="inline-flex items-center bg-gradient-to-r from-purple-600 to-violet-600 text-white px-6 py-3 rounded-xl font-medium hover:from-purple-700 hover:to-violet-700 transition-all duration-200"
+                          >
+                            <Search className="w-5 h-5 mr-2" />
+                            Browse All Teachers
+                          </Link>
+                        </div>
+                      </div>
+                    )}
+                    {dashboardData.recentTeachers.length > 0 && (
+                      <div className="text-center mt-8">
+                        <Link 
+                          to="/student/find-teachers"
+                          className="inline-flex items-center text-purple-600 hover:text-purple-800 font-medium transition-colors duration-200"
+                        >
+                          View All Teachers
+                          <ChevronRight className="w-4 h-4 ml-1" />
+                        </Link>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
 
               {/* Recent Notifications */}
@@ -780,7 +1244,7 @@ const StudentDashboard = () => {
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {dashboardData.recentTeachers.filter(teacher => teacher.isFavorite).map(teacher => (
-                  <TeacherCard key={teacher.id} teacher={teacher} />
+                  <TeacherCard key={teacher.id} teacher={teacher} onToggleFavorite={toggleFavorite} />
                 ))}
               </div>
               {dashboardData.recentTeachers.filter(teacher => teacher.isFavorite).length === 0 && (
