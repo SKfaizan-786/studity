@@ -36,8 +36,6 @@ export default function Navbar() {
 
   const navLinks = [
     { name: 'Find Teachers', path: '/student/find-teachers', roles: ['student'] },
-    { name: 'Courses', path: '/courses', roles: ['student', 'teacher'] },
-    { name: 'Help', path: '/help', roles: [] },
   ];
 
   return (
