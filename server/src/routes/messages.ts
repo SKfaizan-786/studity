@@ -27,14 +27,38 @@ const authenticateToken = (req: any, res: any, next: any) => {
 router.get('/conversations', authenticateToken, async (req: any, res) => {
   try {
     const userId = req.user._id;
+    console.log('🔍 Fetching conversations for user ID:', userId);
+    console.log('🆔 User ID type:', typeof userId, userId.constructor.name);
+    
+    // Convert userId to ObjectId for aggregation
+    const mongoose = require('mongoose');
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+    console.log('🔄 Converted to ObjectId:', userObjectId);
+    
+    // First, let's check if there are any messages for this user
+    const userMessages = await Message.find({
+      $or: [
+        { sender: userObjectId },
+        { recipient: userObjectId }
+      ],
+      isDeleted: false
+    });
+    
+    console.log('📩 Found messages for user:', userMessages.length);
+    console.log('📋 Sample messages:', userMessages.slice(0, 3).map(m => ({
+      id: m._id,
+      sender: m.sender,
+      recipient: m.recipient,
+      content: m.content.substring(0, 50)
+    })));
     
     // Get all messages where user is sender or recipient
     const messages = await Message.aggregate([
       {
         $match: {
           $or: [
-            { sender: userId },
-            { recipient: userId }
+            { sender: userObjectId },
+            { recipient: userObjectId }
           ],
           isDeleted: false
         }
@@ -46,7 +70,7 @@ router.get('/conversations', authenticateToken, async (req: any, res) => {
         $group: {
           _id: {
             $cond: [
-              { $eq: ['$sender', userId] },
+              { $eq: ['$sender', userObjectId] },
               '$recipient',
               '$sender'
             ]
@@ -57,7 +81,7 @@ router.get('/conversations', authenticateToken, async (req: any, res) => {
               $cond: [
                 {
                   $and: [
-                    { $eq: ['$recipient', userId] },
+                    { $eq: ['$recipient', userObjectId] },
                     { $eq: ['$isRead', false] }
                   ]
                 },
@@ -98,9 +122,12 @@ router.get('/conversations', authenticateToken, async (req: any, res) => {
       }
     ]);
 
+    console.log('🎯 Final aggregation result:', messages.length, 'conversations');
+    console.log('📊 Conversations data:', messages);
+
     res.json(messages);
   } catch (error) {
-    console.error('Error fetching conversations:', error);
+    console.error('❌ Error in conversations endpoint:', error);
     res.status(500).json({ message: 'Failed to fetch conversations' });
   }
 });
@@ -149,11 +176,17 @@ router.post('/send', authenticateToken, async (req: any, res) => {
     const { recipient, content, messageType = 'text', booking, replyTo } = req.body;
     const userId = req.user._id;
 
+    console.log('💬 Sending message from user:', userId, 'to recipient:', recipient);
+    console.log('📝 Message content:', content);
+
     // Validate recipient exists
     const recipientUser = await User.findById(recipient);
     if (!recipientUser) {
+      console.log('❌ Recipient not found:', recipient);
       return res.status(404).json({ message: 'Recipient not found' });
     }
+
+    console.log('✅ Recipient found:', recipientUser.firstName, recipientUser.lastName);
 
     const newMessage = new Message({
       sender: userId,
@@ -166,6 +199,14 @@ router.post('/send', authenticateToken, async (req: any, res) => {
 
     await newMessage.save();
     
+    console.log('💾 Message saved with ID:', newMessage._id);
+    console.log('📊 Message details:', {
+      id: newMessage._id,
+      sender: newMessage.sender,
+      recipient: newMessage.recipient,
+      content: newMessage.content
+    });
+    
     await newMessage.populate([
       { path: 'sender', select: 'firstName lastName avatar email' },
       { path: 'recipient', select: 'firstName lastName avatar email' },
@@ -174,7 +215,7 @@ router.post('/send', authenticateToken, async (req: any, res) => {
 
     res.status(201).json(newMessage);
   } catch (error) {
-    console.error('Error sending message:', error);
+    console.error('❌ Error sending message:', error);
     res.status(500).json({ message: 'Failed to send message' });
   }
 });

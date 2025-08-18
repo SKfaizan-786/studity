@@ -180,14 +180,23 @@ const Messages = () => {
 
   const fetchConversations = async () => {
     try {
+      console.log('🔄 Fetching conversations...');
       const token = localStorage.getItem('token');
+      console.log('🔑 Token for conversations:', token ? 'Present' : 'Missing');
+      
       const response = await axios.get(`${API_CONFIG.BASE_URL}/api/messages/conversations`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
+      console.log('📞 Conversations API response:', response.status, response.data);
+      console.log('📊 Number of conversations:', response.data.length);
+      
       setConversations(response.data);
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching conversations:', error);
+      console.error('❌ Error fetching conversations:', error);
+      console.error('📄 Error details:', error.response?.data);
+      console.error('📊 Error status:', error.response?.status);
       setLoading(false);
     }
   };
@@ -242,9 +251,49 @@ const Messages = () => {
     setNewMessage(''); // Clear input immediately
     
     try {
-      // Try to send via socket first (if available and online)
+      // Always save to database via HTTP API first
+      const token = localStorage.getItem('token');
+      if (token) {
+        const apiResponse = await axios.post(
+          `${API_CONFIG.BASE_URL}/api/messages/send`,
+          {
+            recipient: selectedConversation.participant._id,
+            content: messageData.content,
+            messageType: 'text'
+          },
+          {
+            headers: { Authorization: `Bearer ${token}` }
+          }
+        );
+        
+        console.log('Message saved to database:', apiResponse.data);
+        
+        // Update local message with the database ID
+        setMessages(prev => prev.map(msg => 
+          msg._id === localMessage._id 
+            ? { ...msg, _id: apiResponse.data._id, status: 'sent' }
+            : msg
+        ));
+        
+        // Refresh conversations list to show new conversation
+        console.log('🔄 Refreshing conversations after sending message...');
+        await fetchConversations();
+      }
+      
+      // Also send via socket for real-time delivery (if available)
       if (socket && isConnected && isOnline) {
-        console.log('Sending via socket...');
+        console.log('Also sending via socket for real-time delivery...');
+        socket.emit('send_message', messageData);
+      } else {
+        console.log('Socket not available, but message saved to database');
+      }
+      
+    } catch (error) {
+      console.error('Error sending message:', error);
+      
+      // If database save fails, try socket or queue
+      if (socket && isConnected && isOnline) {
+        console.log('Database save failed, trying socket...');
         socket.emit('send_message', messageData);
         
         // Update message status to sent
@@ -254,13 +303,6 @@ const Messages = () => {
             : msg
         ));
       } else {
-        // Fallback: Queue message for later or send via HTTP
-        console.log('Socket not available, queuing message or using HTTP fallback', {
-          hasSocket: !!socket,
-          isConnected,
-          isOnline
-        });
-        
         // Update message status to queued
         setMessages(prev => prev.map(msg => 
           msg._id === localMessage._id 
@@ -283,15 +325,6 @@ const Messages = () => {
           setTimeout(() => setShowOfflineNotice(false), 3000);
         }
       }
-    } catch (error) {
-      console.error('Error sending message:', error);
-      
-      // Update message status to failed
-      setMessages(prev => prev.map(msg => 
-        msg._id === localMessage._id 
-          ? { ...msg, status: 'failed' }
-          : msg
-      ));
     } finally {
       setSendingMessage(false);
     }
@@ -495,6 +528,16 @@ const Messages = () => {
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {messages.map((message, index) => {
                   const isOwnMessage = message.sender._id === currentUser?._id;
+                  
+                  // Debug logging
+                  console.log('🔍 Message comparison:', {
+                    messageId: message._id,
+                    messageSenderId: message.sender._id,
+                    currentUserId: currentUser?._id,
+                    isOwnMessage: isOwnMessage,
+                    messageContent: message.content.substring(0, 30)
+                  });
+                  
                   const showDate = index === 0 || 
                     formatDate(message.createdAt) !== formatDate(messages[index - 1].createdAt);
                   

@@ -23,26 +23,32 @@ export const SocketProvider = ({ children, userId }) => {
   useEffect(() => {
     // Only connect if we have a userId (user is logged in)
     if (userId) {
-      const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
-        withCredentials: true
+      console.log('🔌 Initializing socket connection for user:', userId);
+      const socketUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      console.log('🌐 Connecting to:', socketUrl);
+      
+      const newSocket = io(socketUrl, {
+        withCredentials: true,
+        transports: ['websocket', 'polling'] // Try websocket first, fallback to polling
       });
 
       setSocket(newSocket);
 
       newSocket.on('connect', () => {
-        console.log('Connected to server');
+        console.log('✅ Connected to server');
         setIsConnected(true);
         // Authenticate the user with the server
         newSocket.emit('authenticate', userId);
+        console.log('🔐 Sent authentication for user:', userId);
       });
 
       newSocket.on('disconnect', () => {
-        console.log('Disconnected from server');
+        console.log('❌ Disconnected from server');
         setIsConnected(false);
       });
 
       newSocket.on('connect_error', (error) => {
-        console.error('Connection error:', error);
+        console.error('🚨 Connection error:', error);
         setIsConnected(false);
       });
 

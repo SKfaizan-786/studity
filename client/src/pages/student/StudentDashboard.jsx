@@ -1027,14 +1027,7 @@ const StudentDashboard = () => {
                   <Search className="w-5 h-5 group-hover:text-blue-600 transition-colors duration-200 flex-shrink-0" />
                   {!isSidebarCollapsed && <span className="group-hover:text-blue-600 transition-colors duration-200 truncate">Find Teachers</span>}
                 </Link>
-                <Link
-                  to="/student/messages"
-                  className={`flex items-center w-full p-3 text-left text-slate-700 hover:bg-white/40 rounded-xl transition-all duration-200 group overflow-hidden ${isSidebarCollapsed ? 'justify-center' : 'space-x-3'}`}
-                  title={isSidebarCollapsed ? 'Messages' : ''}
-                >
-                  <MessageSquare className="w-5 h-5 group-hover:text-blue-600 transition-colors duration-200 flex-shrink-0" />
-                  {!isSidebarCollapsed && <span className="group-hover:text-blue-600 transition-colors duration-200 truncate">Messages</span>}
-                </Link>
+                {/* Messages button hidden as per request */}
               </div>
             </nav>
 
